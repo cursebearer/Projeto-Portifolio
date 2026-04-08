@@ -167,6 +167,6 @@ Projeto-Portifolio/
 - [ ] **Fase 3** — Frontend Next.js (Login, Dashboard, Upload, Verificacao)
 - [ ] **Fase 4** — Integracao e testes finais
 
-## Licenca
+## Licença
 
 Este repositorio faz parte do projeto Portifolio (Trabalho de Conclusao de Curso).
