@@ -30,6 +30,22 @@ enum StorageType {
   IPFS   // Arquivo salvo no IPFS (Fase 2)
 }
 
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  REGISTER
+  UPLOAD
+  DOWNLOAD
+  DELETE
+  VERIFY_PUBLIC   // /verify sem autenticação
+  VERIFY_PRIVATE  // verificação via dashboard (RF16)
+}
+
+enum VerificationSource {
+  PUBLIC   // chamada via /verify (sem login)
+  PRIVATE  // chamada via dashboard autenticado
+}
+
 // ─────────────────────────────────────────────────────────────
 // TABELA: users
 // ─────────────────────────────────────────────────────────────
@@ -42,7 +58,9 @@ model User {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  documents     Document[]
+  documents             Document[]
+  auditLogs             AuditLog[]
+  verificationAttempts  VerificationAttempt[]
 
   @@map("users")
 }
@@ -86,13 +104,63 @@ model Document {
   confirmedAt     DateTime?      @map("confirmed_at")       // quando blockchain confirmou
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
-  // Relação
-  user            User           @relation(fields: [userId], references: [id])
+  // Relações
+  user                  User                  @relation(fields: [userId], references: [id])
+  verificationAttempts  VerificationAttempt[]
 
   @@index([userId])
   @@index([hash])
   @@index([status])
   @@map("documents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// TABELA: audit_logs
+// Trilha de auditoria — compliance LGPD e investigação de incidentes
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id")              // NULL em ações públicas
+  action       AuditAction
+  resourceType String?     @map("resource_type")        // "document", "user", etc.
+  resourceId   String?     @map("resource_id")          // ID do recurso afetado
+  ipAddress    String?     @map("ip_address")           // IPv4 ou IPv6
+  userAgent    String?     @map("user_agent")
+  metadata     Json?                                     // Dados específicos da ação (ex: { fileName, hash })
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// TABELA: verification_attempts
+// Log de cada chamada a /verify (público ou privado) — analytics e anti-abuso
+// ─────────────────────────────────────────────────────────────
+
+model VerificationAttempt {
+  id          String             @id @default(uuid())
+  hash        String                                          // SHA-256 consultado
+  found       Boolean                                         // true se hash existe on-chain
+  documentId  String?            @map("document_id")          // Preenchido se found=true E registro existe no banco
+  userId      String?            @map("user_id")              // NULL para PUBLIC; preenchido para PRIVATE
+  source      VerificationSource @default(PUBLIC)
+  ipAddress   String?            @map("ip_address")
+  userAgent   String?            @map("user_agent")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  document    Document?          @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([hash])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("verification_attempts")
 }
 ```
 

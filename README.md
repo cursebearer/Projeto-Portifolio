@@ -1,6 +1,8 @@
 # DocChain — Registro Documental com Blockchain
 
-Plataforma SaaS para registro, armazenamento e verificação de autenticidade de documentos digitais com prova de integridade em blockchain (Sepolia Testnet).
+Plataforma **SaaS open-source** para registro, armazenamento e verificação de autenticidade de documentos digitais com prova de integridade em blockchain (Sepolia Testnet).
+
+Construída com arquitetura e qualidade de produto real (criptografia AES-256-GCM em repouso, hash SHA-256 do arquivo original, API REST documentada, frontend responsivo, infra containerizada), e mantida **gratuita por escolha estratégica** — a permanência em testnet permite que qualquer pessoa audite o código, rode localmente ou contribua, sem barreiras de gas/billing.
 
 ## Arquitetura
 
@@ -169,4 +171,4 @@ Projeto-Portifolio/
 
 ## Licença
 
-Este repositorio faz parte do projeto Portifolio (Trabalho de Conclusao de Curso).
+Projeto **open-source**. Este repositório também integra o Projeto Portifólio (Trabalho de Conclusão de Curso) da Católica SC.
