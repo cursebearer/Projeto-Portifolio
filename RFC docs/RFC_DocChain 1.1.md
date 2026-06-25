@@ -634,8 +634,13 @@ Visão macro do DocChain como caixa preta dentro do seu ecossistema.
 
 **Nível 2 — Diagrama de Containers**
 
-Decomposição do sistema em unidades de execução independentes:
+Decomposição do sistema em unidades de execução independentes.
 
+**Atores que interagem com os containers:**
+- **Usuário** (autenticado) — acessa `docchain-web` via navegador para registrar e gerenciar seus documentos.
+- **Verificador Público** (visitante) — acessa `docchain-web` para consultar autenticidade de documentos sem login.
+
+**Containers do sistema:**
 - **docchain-web** — Aplicação **Next.js 14** com App Router, servida via Node.js. Entrega SSR/CSR para o navegador. Comunica-se via HTTPS/JSON com a API.
 - **docchain-api** — Aplicação **NestJS 11** expondo REST API. Orquestra fluxos de upload, criptografia, storage e blockchain.
 - **docchain-db** — **PostgreSQL 16** armazenando users e documents (apenas metadados).
