@@ -1,0 +1,37 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'14px','actorTextColor':'#0b1320','actorBkg':'#e8f4ff','actorBorder':'#1f3b73','signalColor':'#1f3b73','signalTextColor':'#0b1320','noteBkgColor':'#fdf6e3','noteBorderColor':'#8a6d3b'}}}%%
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant W as docchain-web<br/>(Next.js)
+    participant A as docchain-api<br/>(NestJS)
+    participant CR as CryptoService
+    participant ST as StorageService
+    participant BC as BlockchainService
+    participant DR as DocumentRegistry.sol<br/>(Sepolia)
+    participant DB as PostgreSQL
+
+    U->>W: POST /login (email, senha)
+    W->>A: POST /auth/login
+    A->>DB: SELECT user WHERE email
+    DB-->>A: passwordHash
+    A->>A: bcrypt.compare
+    A-->>W: 200 + Set-Cookie: access_token (HttpOnly, Secure, SameSite=Lax, Max-Age=900)
+    Note over W,A: Sessão estabelecida via cookie httpOnly<br/>JS do frontend NÃO acessa o token
+    U->>W: Seleciona arquivo (max 50 MB)
+    U->>W: Clica "Registrar na Blockchain"
+    W->>A: POST /documents (multipart, cookie auto)
+    A->>A: JwtAuthGuard (cookieExtractor)
+    A->>DB: INSERT Document (status=PENDING)
+    A->>CR: hashFile(buffer) → SHA-256
+    CR-->>A: hash
+    A->>CR: encrypt(buffer) → AES-256-GCM
+    CR-->>A: {ciphertext, iv, authTag}
+    A->>ST: save(ciphertext, hash) → /uploads/{hash}.enc
+    ST-->>A: storageRef
+    A->>BC: registerDocument(hash, storageRef)
+    BC->>DR: tx (assinada pela wallet do servidor)
+    DR-->>BC: txHash + receipt (1 confirmação)
+    BC-->>A: {txHash, blockNumber, walletAddress}
+    A->>DB: UPDATE Document (status=CONFIRMED, txHash, iv, authTag)
+    A-->>W: 201 + DocumentDto
+    W-->>U: Tela de sucesso (hash + link Etherscan)

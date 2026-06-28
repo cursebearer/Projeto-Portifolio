@@ -1,0 +1,26 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+flowchart TB
+    Usuario(["fa:fa-user Usuário"]):::person
+    Verificador(["fa:fa-user Verificador<br/>Público"]):::person
+
+    subgraph DocChain["Sistema DocChain"]
+        direction TB
+        Web["<b>docchain-web</b><br/><i>Next.js 14 + Tailwind + shadcn/ui</i><br/>SSR/CSR. Telas, dropzone,<br/>navegação, middleware de cookie."]:::container
+        API["<b>docchain-api</b><br/><i>NestJS 11 + TypeScript</i><br/>API REST. Auth (cookie httpOnly),<br/>upload, crypto, storage, blockchain."]:::container
+        DB[("<b>docchain-db</b><br/><i>PostgreSQL 16</i><br/>User, Document, AuditLog,<br/>VerificationAttempt")]:::database
+        Storage["<b>docchain-storage</b><br/><i>Volume Docker</i><br/>Arquivos AES-256-GCM<br/>em /uploads/{hash}.enc"]:::container
+    end
+
+    Sepolia["<b>Sepolia Testnet</b><br/><i>Ethereum</i><br/>DocumentRegistry.sol"]:::external
+
+    Usuario -->|"Acessa via navegador<br/>[HTTPS]"| Web
+    Verificador -->|"Acessa /verify<br/>[HTTPS]"| Web
+    Web -->|"REST + cookie httpOnly<br/>(withCredentials)<br/>[HTTPS / JSON]"| API
+    API -->|"Consulta + persiste<br/>[TCP / 5432]"| DB
+    API -->|"Lê/grava cifrado<br/>[Filesystem]"| Storage
+    API -->|"registerDocument,<br/>verifyDocument<br/>(Ethers.js v6)<br/>[JSON-RPC / HTTPS]"| Sepolia
+
+    classDef person fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2.5px,color:#0b1320
+    classDef container fill:#cfe2f3,stroke:#1f3b73,stroke-width:2.5px,color:#0b1320
+    classDef database fill:#d9ead3,stroke:#2e6b3c,stroke-width:2.5px,color:#0b1320
+    classDef external fill:#f4cccc,stroke:#a33,stroke-width:2.5px,color:#0b1320

@@ -1,0 +1,16 @@
+/* App shell — sidebar + topbar (dark) */
+.app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; background: var(--bg); }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; }
+.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 8px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.sidebar-logo-name { font-size: 18px; font-weight: 700; color: var(--primary); }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer; }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--primary-light); color: var(--primary); }
+.nav-spacer { flex: 1; }
+.main { display: flex; flex-direction: column; background: var(--bg); }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #0b1320; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.content { padding: 32px; flex: 1; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+.page-header h1 { font-size: 26px; margin: 0 0 6px; color: var(--text); }
+.page-header .sub { color: var(--text-muted); font-size: 14px; }

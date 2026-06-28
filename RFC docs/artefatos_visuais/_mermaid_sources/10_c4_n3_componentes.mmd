@@ -1,0 +1,55 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'13px'}}}%%
+flowchart TB
+    Web["<b>docchain-web</b><br/><i>[Container Externo]</i><br/>Next.js 14"]:::ext
+    DB[("<b>PostgreSQL 16</b><br/><i>[Container Externo]</i>")]:::ext
+    Storage["<b>Volume /uploads</b><br/><i>[Container Externo]</i>"]:::ext
+    Sepolia["<b>Sepolia +<br/>DocumentRegistry.sol</b><br/><i>[Sistema Externo]</i>"]:::ext
+
+    subgraph API["docchain-api (NestJS 11)"]
+        direction TB
+
+        subgraph AuthMod["Módulo Auth"]
+            AuthCtrl["<b>AuthController</b><br/><i>[REST]</i><br/>POST /auth/register<br/>POST /auth/login (Set-Cookie httpOnly)<br/>POST /auth/logout (Max-Age=0)<br/>GET /auth/me"]:::comp
+            AuthSvc["<b>AuthService</b><br/><i>[Service]</i><br/>bcrypt + emissão JWT<br/>(HS256, expira 15 min)"]:::comp
+            JwtStrat["<b>JwtStrategy +<br/>JwtAuthGuard</b><br/><i>[Passport]</i><br/>cookieExtractor:<br/>req.cookies.access_token"]:::comp
+        end
+
+        subgraph DocsMod["Módulo Documents"]
+            DocsCtrl["<b>DocumentsController</b><br/><i>[REST]</i><br/>POST /documents<br/>GET /documents (?status)<br/>GET /documents/:id<br/>DELETE /documents/:id (soft)<br/>POST /documents/:id/verify<br/>GET /verify/public/:hash"]:::comp
+            DocsSvc["<b>DocumentsService</b><br/><i>[Service]</i><br/>Orquestra hash → crypto →<br/>storage → blockchain.<br/>RF19 (valida hash) + RF22 (soft-delete)"]:::comp
+        end
+
+        subgraph Providers["Providers"]
+            Crypto["<b>CryptoService</b><br/>hashFile (SHA-256)<br/>encrypt/decrypt<br/>(AES-256-GCM)"]:::comp
+            StoreSvc["<b>LocalStorageService</b><br/><i>implements IStorageService</i><br/>save/read/delete em<br/>/uploads/{hash}.enc"]:::comp
+            ChainSvc["<b>BlockchainService</b><br/><i>Ethers.js v6</i><br/>registerDocument<br/>verifyDocument<br/>isRegistered"]:::comp
+        end
+
+        subgraph Cross["Infraestrutura Transversal"]
+            Prisma["<b>PrismaService</b><br/><i>Global</i><br/>User, Document,<br/>AuditLog, VerificationAttempt"]:::comp
+            Audit["<b>AuditInterceptor</b><br/><i>Global</i><br/>Registra LOGIN/UPLOAD/<br/>DELETE/VERIFY"]:::comp
+            Throttle["<b>ThrottlerGuard</b><br/>10 req / 60 s por IP"]:::comp
+            Exc["<b>GlobalExceptionFilter</b>"]:::comp
+            Swagger["<b>SwaggerModule</b><br/>OpenAPI 3 em<br/>/api/docs"]:::comp
+        end
+    end
+
+    Web -->|"cookie httpOnly + withCredentials<br/>[HTTPS]"| AuthCtrl
+    Web -->|"cookie httpOnly<br/>[HTTPS]"| DocsCtrl
+    AuthCtrl --> AuthSvc
+    AuthCtrl --> JwtStrat
+    AuthSvc --> Prisma
+    DocsCtrl --> JwtStrat
+    DocsCtrl --> DocsSvc
+    DocsSvc --> Crypto
+    DocsSvc --> StoreSvc
+    DocsSvc --> ChainSvc
+    DocsSvc --> Prisma
+    DocsSvc --> Audit
+    Audit --> Prisma
+    StoreSvc -->|"[Filesystem]"| Storage
+    ChainSvc -->|"[JSON-RPC]"| Sepolia
+    Prisma -->|"[TCP/5432]"| DB
+
+    classDef ext fill:#f4cccc,stroke:#a33,stroke-width:2.5px,color:#0b1320
+    classDef comp fill:#cfe2f3,stroke:#1f3b73,stroke-width:2px,color:#0b1320

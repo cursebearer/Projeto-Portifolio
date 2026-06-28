@@ -1,0 +1,42 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+flowchart TB
+    subgraph Flow["FLUXO DE UPLOAD (caminho feliz até a tx)"]
+        direction LR
+        Start([Tentativa de upload]):::start
+        Hash["Calcula SHA-256"]:::step
+        Encrypt["AES-256-GCM<br/>(IV + authTag)"]:::step
+        Store["Salva arquivo cifrado<br/>/uploads/{hash}.enc"]:::step
+        Chain["BlockchainService<br/>.registerDocument<br/>(envia tx Sepolia)"]:::step
+        Result{"Resultado<br/>on-chain"}:::decision
+        Start --> Hash --> Encrypt --> Store --> Chain --> Result
+    end
+
+    subgraph LaneE01["E01 — Falha de transação (timeout, sem ETH, RPC down, contrato pausado)"]
+        direction TB
+        E01["<b>E01</b><br/>Falha de transação"]:::err
+        E01Action["UPDATE Document<br/>status=FAILED<br/>failureReason='blockchain timeout'"]:::action
+        E01Keep["Arquivo cifrado<br/>mantido em disco<br/>(permite retry)"]:::action
+        E01Toast["Toast erro com motivo<br/>botão 'Tentar novamente'"]:::action
+        E01End([RN07: retry permitido<br/>se hash não confirmado]):::done
+        E01 --> E01Action --> E01Keep --> E01Toast --> E01End
+    end
+
+    subgraph LaneE02["E02 — Hash duplicado (contrato retorna DocumentAlreadyRegistered)"]
+        direction TB
+        E02["<b>E02</b><br/>Hash duplicado"]:::err
+        E02Resp["Backend → 409 Conflict<br/>'Hash já registrado'"]:::action
+        E02Rollback["DELETE Document<br/>(PENDING criado)<br/>+ rm arquivo cifrado"]:::action
+        E02Msg["Frontend exibe<br/>mensagem clara"]:::action
+        E02End([Estado consistente:<br/>sem registro duplicado<br/>off-chain]):::done
+        E02 --> E02Resp --> E02Rollback --> E02Msg --> E02End
+    end
+
+    Result -- "falha de tx" --> E01
+    Result -- "DocumentAlreadyRegistered" --> E02
+
+    classDef start fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2.5px,color:#0b1320
+    classDef step fill:#cfe2f3,stroke:#1f3b73,stroke-width:2.5px,color:#0b1320
+    classDef decision fill:#fff2cc,stroke:#a06b00,stroke-width:2.5px,color:#0b1320
+    classDef err fill:#f4cccc,stroke:#a33,stroke-width:3px,color:#0b1320
+    classDef action fill:#ececec,stroke:#444,stroke-width:2px,color:#0b1320
+    classDef done fill:#d9ead3,stroke:#2e6b3c,stroke-width:2.5px,color:#0b1320

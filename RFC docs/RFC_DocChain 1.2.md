@@ -1,18 +1,20 @@
+# RFC: DocChain — Plataforma de Registro Documental com Prova de Integridade em Blockchain
+
 **Engenharia de Software — Católica SC**
 
 ---
 
-## Identificação
+# Identificação
 
 - **Título do Projeto:** DocChain — Plataforma de Registro Documental com Prova de Integridade em Blockchain
 - **Linha de Projeto (Direction):** Web / Plataforma
 - **Autor:** *Rafael Pavesi dos Passos*
 - **Data da Proposta:** 12/04/2026
-- **Versão:** 1.0
+- **Versão:** 1.2 (revisão pós-feedback do orientador — padronização de auth via cookie httpOnly, RFs de exclusão e validação de hash, novo diagrama de Estrutura de Navegação)
 
 ---
 
-## 1. Visão do Produto e Impacto (O Problema)
+# 1. Visão do Produto e Impacto (O Problema)
 
 > Este projeto resolve um problema real ou e apenas um exercício técnico?
 
@@ -20,7 +22,7 @@ O DocChain resolve um problema real e crescente: a necessidade de garantir auten
 
 ---
 
-### 1.1 Contexto e Problema
+## 1.1 Contexto e Problema
 
 A gestão de documentos digitais é um dos pilares de qualquer organização moderna. Contratos, certificados, laudos, diplomas, notas fiscais e relatórios circulam diariamente em formato digital, porém sem garantias reais de que não foram adulterados após sua emissão.
 
@@ -49,7 +51,7 @@ A gestão de documentos digitais é um dos pilares de qualquer organização mod
 
 ---
 
-### 1.2 Origem da Demanda e Evidências
+## 1.2 Origem da Demanda e Evidências
 
 **Posicionamento do Produto:**
 - O DocChain é um produto **SaaS open-source** de registro documental com blockchain, construído com a mesma arquitetura, qualidade e padrões de uma plataforma comercial real (autenticação, criptografia em repouso, API REST documentada, frontend responsivo, integração on-chain, infra containerizada)
@@ -100,7 +102,7 @@ Conversas informais com profissionais de TI, jurídico e contabilidade de pequen
 
 ---
 
-### 1.3 Análise de Soluções Existentes (Benchmark)
+## 1.3 Análise de Soluções Existentes (Benchmark)
 
 | Solução | Link | Público-Alvo | Funcionalidades Principais | Limitações |
 |---|---|---|---|---|
@@ -134,7 +136,7 @@ Nenhuma das soluções existentes combina criptografia de conteúdo + armazename
 
 ---
 
-### 1.4 Público-Alvo
+## 1.4 Público-Alvo
 
 **Usuários primários:**
 - **Profissionais autônomos** (advogados, contadores, consultores) que precisam registrar a autenticidade de documentos enviados a clientes, garantindo prova de integridade em caso de disputa
@@ -156,7 +158,7 @@ Nenhuma das soluções existentes combina criptografia de conteúdo + armazename
 
 ---
 
-### 1.5 Objetivos do Projeto
+## 1.5 Objetivos do Projeto
 
 **Objetivo Geral:**
 
@@ -172,7 +174,7 @@ Desenvolver uma plataforma web funcional que permita o registro, armazenamento s
 
 ---
 
-### 1.6 Métricas de Sucesso (KPIs)
+## 1.6 Métricas de Sucesso (KPIs)
 
 | Métrica | Meta | Como Medir |
 |---|---|---|
@@ -186,13 +188,13 @@ Desenvolver uma plataforma web funcional que permita o registro, armazenamento s
 
 ---
 
-## 2. Engenharia de Requisitos
+# 2. Engenharia de Requisitos
 
 Esta seção define o que o sistema fara, evitando descrições vagas e ambiguidades. Os requisitos foram derivados da análise do problema (Capítulo 1) e do público-alvo identificado.
 
 ---
 
-### 2.1 Personas
+## 2.1 Personas
 
 **Persona 1 — Mariana, a Advogada Autônoma**
 
@@ -241,7 +243,7 @@ Esta seção define o que o sistema fara, evitando descrições vagas e ambiguid
 
 ---
 
-### 2.2 Casos de Uso Principais
+## 2.2 Casos de Uso Principais
 
 O sistema possui três atores principais e os seguintes casos de uso:
 
@@ -264,19 +266,20 @@ O sistema possui três atores principais e os seguintes casos de uso:
 | UC08 | Verificar Documento Publicamente | Visitante | Sem autenticação, consulta a blockchain via hash ou arquivo |
 | UC09 | Registrar Hash on-chain | Sistema -> Blockchain | Envia transação para o Smart Contract na Sepolia |
 | UC10 | Confirmar Registro on-chain | Blockchain -> Sistema | Sistema aguarda confirmação de bloco e atualiza status |
+| UC11 | Excluir Documento | Usuário Autenticado | Remove documento do dashboard (soft-delete + remoção do arquivo cifrado); registro on-chain permanece imutável |
 
 ![Diagrama de Casos de Uso (UML) — atores, boundary DocChain e 10 casos de uso](<artefatos_visuais/1 - Diagrama de Casos de Uso (UML).png>)
 
 ---
 
-### 2.3 Requisitos Funcionais (RF)
+## 2.3 Requisitos Funcionais (RF)
 
 **Módulo de Autenticação:**
 
 - **RF01** — O sistema deve permitir que o Visitante crie uma conta informando email, senha e nome.
-- **RF02** — O sistema deve permitir que o Usuário realize login com email e senha, recebendo um token JWT.
-- **RF03** — O sistema deve invalidar tokens JWT após 15 minutos, exigindo novo login para sessões prolongadas.
-- **RF04** — O sistema deve permitir que o Usuário realize logout, descartando o token no lado do cliente.
+- **RF02** — O sistema deve permitir que o Usuário realize login com email e senha; em caso de sucesso, o backend deve emitir um JWT e devolvê-lo ao navegador exclusivamente em um cookie `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900`, **não retornando o token no corpo da resposta**.
+- **RF03** — O sistema deve invalidar tokens JWT após 15 minutos (TTL alinhado ao `Max-Age` do cookie), exigindo novo login para sessões prolongadas.
+- **RF04** — O sistema deve permitir que o Usuário realize logout via `POST /auth/logout`, descartando o cookie no navegador através de `Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`.
 
 **Módulo de Upload e Registro:**
 
@@ -300,20 +303,27 @@ O sistema possui três atores principais e os seguintes casos de uso:
 - **RF16** — O sistema deve permitir que o Usuário Autenticado verifique a integridade de um documento, reenviando-o para comparação de hash.
 - **RF17** — O sistema deve permitir que o Visitante (sem autenticação) verifique publicamente a autenticidade de um documento via `GET /verify/public/:hash`, informando o hash SHA-256 diretamente (ou, na interface web, enviando o arquivo — cujo hash é calculado no navegador antes da consulta).
 - **RF18** — O sistema deve retornar resultado claro (Autêntico / Falha) com dados blockchain (data, bloco, endereço que registrou).
+- **RF19** — O sistema deve validar o formato do hash recebido em qualquer endpoint de verificação (público e privado) **antes** de consultar a blockchain: exigir exatamente 64 caracteres hexadecimais (regex `^[a-fA-F0-9]{64}$`); em caso de formato inválido, responder `400 Bad Request` com mensagem explicativa e **não** efetuar a chamada on-chain (defesa contra abuso de RPC e custo desnecessário).
 
 **Módulo de Download:**
 
-- **RF19** — O sistema deve permitir que o Usuário Autenticado faça download do arquivo descriptografado original.
-- **RF20** — O sistema deve negar acesso a documentos que não pertencem ao usuário autenticado (retornar 403 ou 404).
+- **RF20** — O sistema deve permitir que o Usuário Autenticado faça download do arquivo descriptografado original.
+- **RF21** — O sistema deve negar acesso a documentos que não pertencem ao usuário autenticado (retornar 403 ou 404).
 
-**Utilitarios:**
+**Módulo de Gestão de Documentos:**
 
-- **RF21** — O sistema deve expor um endpoint GET /health para verificação de saúde (banco + conexão blockchain).
-- **RF22** — O sistema deve documentar todos os endpoints públicos via Swagger (OpenAPI) em `/api/docs`.
+- **RF22** — O sistema deve permitir que o Usuário Autenticado exclua um documento que lhe pertence via `DELETE /documents/:id`, aplicando **soft-delete**: marcar `Document.deletedAt = now()`, remover fisicamente o arquivo cifrado de `${UPLOAD_DIR}/{hash}.enc` e registrar a ação em `AuditLog` (action `DELETE`, com `resourceId = document.id` e `metadata = { hash, fileName }`).
+- **RF23** — O sistema deve preservar o registro on-chain após exclusão local — a transação na Sepolia é imutável por natureza. A verificação pública (`/verify/public/:hash`) continua retornando `exists: true` para o hash, refletindo o estado real da blockchain; o backend não tenta "apagar" o registro on-chain.
+- **RF24** — O sistema deve ocultar documentos com `deletedAt IS NOT NULL` de todas as listagens privadas (`GET /documents`, dashboard e detalhe) — exclusão é efetiva do ponto de vista do usuário, mantendo apenas a trilha de auditoria no banco.
+
+**Utilitários:**
+
+- **RF25** — O sistema deve expor um endpoint GET /health para verificação de saúde (banco + conexão blockchain).
+- **RF26** — O sistema deve documentar todos os endpoints públicos via Swagger (OpenAPI) em `/api/docs`.
 
 ---
 
-### 2.4 Requisitos Não Funcionais (RNF)
+## 2.4 Requisitos Não Funcionais (RNF)
 
 **Desempenho:**
 
@@ -355,7 +365,7 @@ O sistema possui três atores principais e os seguintes casos de uso:
 
 ---
 
-### 2.5 Regras de Negócio
+## 2.5 Regras de Negócio
 
 - **RN01** — Cada hash SHA-256 só pode ser registrado uma única vez no Smart Contract. Tentativas de registro duplicado retornam erro `DocumentAlreadyRegistered`.
 - **RN02** — O hash registrado on-chain corresponde ao arquivo **original** (antes da criptografia), de modo que a verificação possa ser feita sem descriptografar.
@@ -369,7 +379,7 @@ O sistema possui três atores principais e os seguintes casos de uso:
 
 ---
 
-### 2.6 Fora do Escopo
+## 2.6 Fora do Escopo
 
 Para manter o escopo factível e coerente com a proposta de **produto SaaS open-source rodando em testnet**, os seguintes itens **não serão** implementados nesta primeira versão:
 
@@ -392,22 +402,22 @@ Esses itens compõem o **backlog de evolução futura** — caso a comunidade op
 
 ---
 
-## 3. Fluxos e Comportamento do Sistema
+# 3. Fluxos e Comportamento do Sistema
 
 Esta seção demonstra como o sistema funciona em seus fluxos principais e tratamentos de erro.
 
 ---
 
-### 3.1 Fluxo Principal — Registro de Documento
+## 3.1 Fluxo Principal — Registro de Documento
 
 O fluxo principal do DocChain é o registro de um documento na blockchain, executado em 12 etapas:
 
-1. **Login** — Usuário acessa `/login`, informa email e senha, recebe JWT no corpo da resposta JSON (armazenado na store Zustand do frontend, injetado nas requisições privadas via interceptor axios no header `Authorization: Bearer`)
+1. **Login** — Usuário acessa `/login`, informa email e senha; o backend valida as credenciais e responde com `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900`. O token **nunca** é exposto ao JavaScript do frontend; o navegador anexa o cookie automaticamente nas requisições subsequentes ao domínio da API (axios configurado com `withCredentials: true`).
 2. **Acesso ao upload** — Usuário navega para `/upload`
 3. **Seleção do arquivo** — Usuário arrasta arquivo na dropzone ou clica para selecionar (max. 50 MB)
 4. **Confirmação** — Usuário clica em "Registrar na Blockchain"
-5. **Envio multipart** — Frontend envia POST /documents com arquivo + Authorization Bearer JWT
-6. **Validação backend** — JwtAuthGuard valida token; Multer carrega arquivo em buffer
+5. **Envio multipart** — Frontend envia `POST /documents` (multipart/form-data) com `withCredentials: true`; o navegador anexa o cookie `access_token` automaticamente
+6. **Validação backend** — `JwtAuthGuard` extrai o JWT do cookie via `cookieExtractor` do Passport, valida assinatura/expiração; Multer carrega arquivo em buffer
 7. **Criação do registro** — DB persiste registro inicial com status `PENDING`
 8. **Cálculo do hash** — `CryptoService.hashFile(buffer)` gera SHA-256 do arquivo original
 9. **Criptografia** — `CryptoService.encrypt(buffer)` gera ciphertext + IV + authTag (AES-256-GCM)
@@ -423,7 +433,7 @@ Após a confirmação, o frontend atualiza a UI mostrando o hash truncado, link 
 
 ---
 
-### 3.2 Fluxo Alternativo — Verificação Pública
+## 3.2 Fluxo Alternativo — Verificação Pública
 
 A verificação pública permite a um terceiro validar a autenticidade de um documento sem possuir conta na plataforma:
 
@@ -443,14 +453,14 @@ A verificação pública permite a um terceiro validar a autenticidade de um doc
 
 ---
 
-### 3.3 Fluxos Alternativos — Exceções e Erros
+## 3.3 Fluxos Alternativos — Exceções e Erros
 
 | Código | Situação | Causa | Tratamento |
 |---|---|---|---|
 | **E01** | Falha na transação blockchain durante upload | Timeout, sem saldo de ETH, contrato pausado | Status do documento marcado como `FAILED`; arquivo criptografado mantido em disco; toast de erro com motivo; permite retry |
 | **E02** | Hash duplicado | Usuário tenta registrar arquivo cujo hash já existe no contrato | Contrato retorna `DocumentAlreadyRegistered`; backend responde 409 Conflict; frontend exibe mensagem clara |
 | **E03** | Arquivo acima de 50 MB | Upload excede o limite | Backend responde 413 Payload Too Large antes de processar; frontend valida tamanho antes do envio |
-| **E04** | Token JWT expirado | Sessao maior que 15 min | Backend responde 401; axios interceptor redireciona automaticamente para `/login` |
+| **E04** | Token JWT expirado | Sessão maior que 15 min — cookie `access_token` ainda enviado pelo navegador, mas JWT interno já expirou | Backend responde `401 Unauthorized` + `Set-Cookie` apagando o cookie (`Max-Age=0`); axios interceptor redireciona automaticamente para `/login` |
 | **E05** | Tentativa de acessar documento de outro usuário | userId não confere | Backend responde 404 (intencionalmente vago, para não expor existência); frontend exibe "Documento não encontrado" |
 | **E06** | Falha na descriptografia | Chave alterada ou arquivo corrompido | Backend responde 500 com mensagem genérica; logs internos detalham o erro real |
 | **E07** | Hash inválido na verificação pública | Formato incorreto (não tem 64 hex chars) | Backend responde 400 Bad Request com mensagem explicativa |
@@ -459,13 +469,13 @@ A verificação pública permite a um terceiro validar a autenticidade de um doc
 
 ---
 
-## 4. Mockups e Experiência do Usuário (UX)
+# 4. Mockups e Experiência do Usuário (UX)
 
 Esta seção apresenta a visualização do produto antes da implementação, validando o fluxo de navegação, a organização da interface e a clareza da experiência.
 
 ---
 
-### 4.1 Fluxo de Navegação
+## 4.1 Fluxo de Navegação
 
 O DocChain possui as seguintes rotas:
 
@@ -479,28 +489,22 @@ O DocChain possui as seguintes rotas:
 - `/upload` — Upload de novo documento
 - `/documents/[id]` — Detalhe + verificação + download de um documento
 
-**Estrutura de navegação:**
+**Estrutura de Navegação:**
 
-```
-[Entrada]
-   |
-   v
-/login <----> /register
-   |
-   v
-/dashboard <----> /upload
-   |                |
-   +---> /documents/[id]
+O DocChain organiza suas rotas em duas regiões claramente separadas — pública (sem autenticação) e protegida (requer cookie httpOnly de sessão válido) — com um ponto único de guarda (Next.js Middleware) que verifica a presença do cookie `access_token` antes de liberar qualquer rota protegida.
 
-[Acesso público independente]
-/verify
-```
+- **Entrada:** todo acesso começa em `/login` ou em `/verify` (rota pública independente, acessível mesmo a partir de links externos sem sessão).
+- **Bloco público:** `/login`, `/register` e `/verify` — navegação livre, sem cookie.
+- **Bloco protegido:** `/dashboard`, `/upload` e `/documents/[id]` — requerem cookie válido; a hierarquia hub-and-spoke (`/dashboard` como hub) está representada no diagrama.
+- **Guarda:** o Next.js Middleware (`middleware.ts`) intercepta toda navegação em rota protegida; se o cookie `access_token` está ausente, redireciona para `/login` antes do render. A validação criptográfica do JWT permanece no backend — o middleware apenas checa presença.
 
-![Fluxo de Navegação entre telas](<artefatos_visuais/6. Fluxo de Navegação (entre telas).png>)
+![Estrutura de Navegação — sitemap com rotas públicas, protegidas e guarda de cookie](<artefatos_visuais/12. Estrutura de Navegação.png>)
+
+![Fluxo de Navegação entre telas — diagrama complementar mostrando transições do usuário](<artefatos_visuais/6. Fluxo de Navegação (entre telas).png>)
 
 ---
 
-### 4.2 Wireframes e Mockups das Telas
+## 4.2 Wireframes e Mockups das Telas
 
 A seguir, descrição das principais telas. Cada uma deve ser produzida no **Figma** (recomendado) com layout responsivo (desktop 1440 px e mobile 375 px).
 
@@ -570,7 +574,7 @@ A seguir, descrição das principais telas. Cada uma deve ser produzida no **Fig
 
 ---
 
-### 4.3 Fluxo de Interação do Usuário
+## 4.3 Fluxo de Interação do Usuário
 
 Demonstração passo a passo do fluxo principal (cadastro + registro de documento + verificação):
 
@@ -594,7 +598,7 @@ Demonstração passo a passo do fluxo principal (cadastro + registro de document
 
 ---
 
-### 4.4 Feedback Inicial de Usuários (Opcional)
+## 4.4 Feedback Inicial de Usuários (Opcional)
 
 Após a produção dos mockups, sugere-se conduzir uma validação rápida com **3 a 5 representantes do público-alvo** (advogados, contadores, estudantes) através de:
 
@@ -607,13 +611,13 @@ Após a produção dos mockups, sugere-se conduzir uma validação rápida com *
 
 ---
 
-## 5. Arquitetura do Sistema
+# 5. Arquitetura do Sistema
 
 Esta seção apresenta como o sistema será construído, utilizando o modelo C4 para descrever a arquitetura em diferentes níveis de abstração.
 
 ---
 
-### 5.1 Diagrama C4
+## 5.1 Diagrama C4
 
 **Nível 1 — Diagrama de Contexto**
 
@@ -689,7 +693,7 @@ Estrutura interna do backend NestJS, organizado em módulos:
 
 ---
 
-### 5.2 Modelo de Dados
+## 5.2 Modelo de Dados
 
 O DocChain utiliza **PostgreSQL** com **quatro entidades** (gerenciadas via Prisma ORM): duas entidades de domínio (`User`, `Document`) e duas entidades operacionais para compliance e analytics (`AuditLog`, `VerificationAttempt`).
 
@@ -771,7 +775,7 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 
 ---
 
-### 5.3 Principais Componentes
+## 5.3 Principais Componentes
 
 **Backend (docchain-api):**
 
@@ -789,9 +793,9 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 **Frontend (docchain-web):**
 
 - **App Router (Next.js 14)** — Rotas estáticas (`/login`, `/register`, `/verify`) e dinâmicas (`/documents/[id]`)
-- **Middleware de Autenticação** — Protege rotas privadas verificando presença e validade do JWT injetado no header `Authorization: Bearer`
-- **Zustand Store** — Estado global de autenticação
-- **API Client (axios)** — Comunicação com backend com interceptors automáticos para Bearer token e tratamento de 401
+- **Middleware de Autenticação (Next.js)** — Protege rotas privadas verificando a presença do cookie `access_token` na requisição (`request.cookies.get('access_token')`); se ausente, redireciona para `/login`. A validação criptográfica do JWT é responsabilidade do backend — o middleware apenas guarda o roteamento.
+- **Zustand Store** — Estado global do usuário logado (id, email, name) hidratado a partir de `GET /auth/me` após o login; **não armazena o JWT**, pois o token vive somente no cookie httpOnly.
+- **API Client (axios)** — Instância única configurada com `withCredentials: true` para que o navegador envie o cookie `access_token` automaticamente; interceptor de resposta trata `401` redirecionando para `/login`.
 - **Componentes UI** — DocumentTable, UploadDropzone, VerifyDropzone, StatusBadge, VerificationResult
 
 **Infraestrutura:**
@@ -801,7 +805,7 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 
 ---
 
-### 5.4 Stack Tecnológica
+## 5.4 Stack Tecnológica
 
 | Camada | Tecnologia | Justificativa |
 |---|---|---|
@@ -819,7 +823,7 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 | Frontend | Next.js 14 (App Router) + TypeScript | Server Components, SSR/CSR híbrido, melhor DX |
 | Estilização | Tailwind CSS + shadcn/ui | Utility-first; shadcn fornece componentes acessíveis customizáveis |
 | Estado global | Zustand 4 | Boilerplate mínimo, hook-based, ideal para auth state |
-| HTTP Client | axios | Interceptors fáceis para injetar Authorization Bearer e tratar 401 |
+| HTTP Client | axios | `withCredentials: true` propaga automaticamente o cookie httpOnly da sessão; interceptors centralizam o tratamento de `401` (logout + redirect) |
 | Upload UI | react-dropzone | Drag-and-drop com validação de tipo e tamanho |
 | Notificações | sonner | Toasts modernos e acessíveis |
 | Infraestrutura | Docker + Docker Compose | Ambiente reproduzível; "docker compose up" sobe tudo |
@@ -835,13 +839,13 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 
 ---
 
-## 6. Segurança e Privacidade
+# 6. Segurança e Privacidade
 
 A segurança é um requisito de primeira classe no DocChain, pois o produto manipula documentos sensíveis e gera provas públicas de autenticidade. Esta seção descreve as defesas adotadas contra as principais classes de ameaças (OWASP Top 10 2021), o modelo de autenticação e autorização, a estratégia de criptografia e o tratamento de dados pessoais sob a Lei Geral de Proteção de Dados (LGPD).
 
 ---
 
-### 6.1 Proteção contra OWASP Top 10 (2021)
+## 6.1 Proteção contra OWASP Top 10 (2021)
 
 Cada item abaixo lista a ameaça, a forma como ela se aplicaria ao DocChain e a mitigação implementada:
 
@@ -860,14 +864,22 @@ Cada item abaixo lista a ameaça, a forma como ela se aplicaria ao DocChain e a 
 
 ---
 
-### 6.2 Autenticação e Autorização
+## 6.2 Autenticação e Autorização
 
 **Autenticação (quem é o usuário):**
 
 - **Cadastro (`POST /auth/register`):** senha trafega via HTTPS, é validada por `RegisterDto` (mínimo 8 caracteres via `@MinLength(8)`) e armazenada como hash **bcrypt** (cost factor recomendado de 12 — ≈ 250 ms por verificação no hardware-alvo).
-- **Login (`POST /auth/login`):** credenciais validadas contra o hash; em caso de sucesso, retorna no corpo da resposta JSON um **access token JWT** (algoritmo `HS256`, segredo em `JWT_SECRET`, expiração definida por `JWT_EXPIRES_IN=15m`).
-- **Transporte do token:** o frontend armazena o token na memória do navegador (estado `Zustand`) e o injeta automaticamente em todas as requisições privadas via interceptor `axios`, no header `Authorization: Bearer {access_token}` — formato definido pelo `API_SPEC`.
-- **Estratégia de validação:** `JwtStrategy` (Passport) extrai o token do header `Authorization`, valida assinatura e expiração, e popula `request.user` com o payload (`{ sub: userId, email }`).
+- **Login (`POST /auth/login`):** credenciais validadas contra o hash; em caso de sucesso, o backend emite um **access token JWT** (algoritmo `HS256`, segredo em `JWT_SECRET`, expiração definida por `JWT_EXPIRES_IN=15m`) e o entrega ao navegador **exclusivamente** em um cookie httpOnly. O token **não trafega no corpo da resposta**, eliminando qualquer acesso via JavaScript.
+- **Transporte do token (cookie httpOnly):** a resposta de login carrega o cabeçalho `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900`. Cada atributo é uma defesa explícita:
+  - `HttpOnly` — impede que qualquer script no frontend leia o cookie (defesa contra XSS roubando a sessão, OWASP A03/A07).
+  - `Secure` — o cookie só é enviado sobre TLS, nunca em requisições HTTP texto-claro.
+  - `SameSite=Lax` — o navegador não anexa o cookie em requisições cross-site iniciadas por outros domínios (mitigação primária de CSRF para fluxos `POST`/`PUT`/`DELETE`); requisições same-site (a aplicação DocChain consumindo a própria API) continuam funcionando.
+  - `Path=/` — válido para toda a superfície da API.
+  - `Max-Age=900` — alinhado ao TTL do JWT (15 min); quando o JWT expira, o cookie também expira no navegador, evitando estado divergente.
+- **Logout (`POST /auth/logout`):** o backend responde com `Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`, removendo o cookie no navegador imediatamente.
+- **Estratégia de validação:** `JwtStrategy` (Passport) usa um `cookieExtractor` customizado — `(req) => req?.cookies?.access_token ?? null` — em vez do extractor padrão `ExtractJwt.fromAuthHeaderAsBearerToken()`. O `JwtAuthGuard` valida assinatura e expiração e popula `request.user` com o payload (`{ sub: userId, email }`). O backend habilita `cookie-parser` no bootstrap (`app.use(cookieParser())`).
+- **CORS:** a configuração CORS do NestJS define `credentials: true` e `origin` restrito ao domínio do frontend — sem essa combinação o navegador descarta o cookie. Wildcard `*` é incompatível com `credentials: true` (regra da spec) e está explicitamente proibido.
+- **Por que cookie httpOnly em vez de `Authorization: Bearer`:** as duas abordagens foram avaliadas. `Bearer` exigiria armazenar o token em memória JavaScript (vulnerável a XSS) ou em `localStorage` (idem); cookie httpOnly remove esse vetor por design. A contrapartida — CSRF — é mitigada por `SameSite=Lax` no MVP, suficiente para o cenário de uso same-site (web e API hospedados sob o mesmo domínio-pai). Caso futuras integrações exijam clientes terceiros, a evolução prevista é introduzir CSRF token rotativo (double-submit), sem reverter para `Bearer`.
 
 **Autorização (o que o usuário pode fazer):**
 
@@ -881,13 +893,13 @@ Cada item abaixo lista a ameaça, a forma como ela se aplicaria ao DocChain e a 
 
 ---
 
-### 6.3 Criptografia de Dados Sensíveis
+## 6.3 Criptografia de Dados Sensíveis
 
 A estratégia de criptografia atua em **três camadas**:
 
 **1) Em trânsito:**
 - **HTTPS obrigatório** entre browser ↔ web ↔ api em produção (TLS 1.2+).
-- O JWT trafega exclusivamente no header `Authorization: Bearer`, protegido pelo TLS — nunca em query string, nunca em log de acesso.
+- O JWT trafega exclusivamente no cookie `access_token` (atributos `HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age=900`), protegido pelo TLS — nunca em query string, nunca em corpo de resposta, nunca em log de acesso. O atributo `Secure` garante que o navegador recuse enviar o cookie sobre HTTP texto-claro.
 
 **2) Em repouso (arquivo):**
 - Antes de gravar em disco, o backend calcula `SHA-256(originalBuffer)` (módulo `crypto` nativo do Node.js) e **só então** criptografa o conteúdo com **AES-256-GCM**:
@@ -898,7 +910,7 @@ A estratégia de criptografia atua em **três camadas**:
 
 **3) Em repouso (banco de dados):**
 - **Senhas:** bcrypt com cost factor 12.
-- **Tokens JWT:** não persistidos no banco; são stateless e expiram em 15 minutos — não há tabela de sessão para vazar.
+- **Tokens JWT:** não persistidos no banco; são stateless, expiram em 15 minutos e residem apenas no cookie httpOnly do navegador — não há tabela de sessão para vazar e o JavaScript do frontend nunca acessa o token.
 - **Campos de PII (`email`, `name`):** armazenados em texto na tabela `User` no MVP — decisão consciente, pois (a) precisam ser indexáveis (`email UNIQUE`) e pesquisáveis para login, e (b) o vetor de ataque é o acesso ao banco, que é mitigado por isolamento de rede Docker e credenciais segregadas (`DATABASE_URL` apenas no `.env` do container API).
 - **Segredos de aplicação (`JWT_SECRET`, `ENCRYPTION_KEY`, `PRIVATE_KEY`):** vivem **exclusivamente** em variáveis de ambiente; o arquivo `.env` está no `.gitignore` desde o commit inicial, e o `.env.example` (commitado) contém apenas placeholders.
 
@@ -908,7 +920,7 @@ Esta é a decisão de segurança mais importante do projeto. O hash registrado n
 
 ---
 
-### 6.4 Privacidade e LGPD
+## 6.4 Privacidade e LGPD
 
 O DocChain coleta o mínimo de dados pessoais necessários para autenticação e auditoria, e oferece controles compatíveis com a Lei nº 13.709/2018 (LGPD).
 
@@ -959,11 +971,11 @@ Esta arquitetura é coerente com a recomendação da ANPD de que dados imutávei
 
 ---
 
-## 7. Planejamento do Projeto
+# 7. Planejamento do Projeto
 
 O desenvolvimento do DocChain está organizado em **5 fases sequenciais**, totalizando aproximadamente **14 dias úteis** de trabalho focado. Cada fase entrega um incremento testável e auditável, com critérios de aceite explícitos. O cronograma abaixo considera a defesa do TCC em **dezembro de 2026** e prevê folga para revisão da banca.
 
-### 7.1 Marcos do Projeto
+## 7.1 Marcos do Projeto
 
 | Marco | Descrição | Entregáveis | Prazo |
 |---|---|---|---|
@@ -974,7 +986,7 @@ O desenvolvimento do DocChain está organizado em **5 fases sequenciais**, total
 | **M4 — Integração e Documentação Final** | Docker Compose unificado para todos os serviços, scripts de seed para demonstração, README definitivo, vídeo demo de 3 minutos e revisão da RFC com a banca. | Repositório pronto para clone-and-run, documentação fechada, ensaio de defesa realizado | **2026-10-04** |
 | **Banca de TCC** | Defesa pública na Católica SC. | Apresentação + demo ao vivo + arguição | **2026-12-XX** (data oficial da banca) |
 
-### 7.2 Riscos e Mitigações
+## 7.2 Riscos e Mitigações
 
 | Risco | Probabilidade | Impacto | Mitigação |
 |---|---|---|---|
@@ -986,11 +998,11 @@ O desenvolvimento do DocChain está organizado em **5 fases sequenciais**, total
 
 ---
 
-## 8. Referências
+# 8. Referências
 
 Lista exclusivamente as fontes efetivamente utilizadas neste documento — normas citadas, ferramentas presentes no `package.json` dos três sub-repositórios, e o modelo institucional adotado.
 
-### 8.1 Normas, Padrões e Legislação (citados nas seções 2, 5 e 6)
+## 8.1 Normas, Padrões e Legislação (citados nas seções 2, 5 e 6)
 
 - **BRASIL.** Lei nº 13.709, de 14 de agosto de 2018. *Lei Geral de Proteção de Dados Pessoais (LGPD).* Citada na seção 6.4. Disponível em: <https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm>
 - **NIST.** *FIPS PUB 180-4 — Secure Hash Standard (SHS).* Define o algoritmo SHA-256 utilizado para hash do arquivo original (seções 5.4 e 6.3). Disponível em: <https://csrc.nist.gov/pubs/fips/180-4/upd1/final>
@@ -998,11 +1010,11 @@ Lista exclusivamente as fontes efetivamente utilizadas neste documento — norma
 - **IETF.** *RFC 7519 — JSON Web Token (JWT).* Formato de token utilizado na autenticação (seções 5.3 e 6.2). Disponível em: <https://datatracker.ietf.org/doc/html/rfc7519>
 - **OWASP Foundation.** *OWASP Top 10 — 2021.* Referencial das 10 ameaças tratadas na seção 6.1. Disponível em: <https://owasp.org/Top10/>
 
-### 8.2 Modelo Arquitetural (citado na seção 5)
+## 8.2 Modelo Arquitetural (citado na seção 5)
 
 - **BROWN, Simon.** *The C4 Model for Visualising Software Architecture.* Base dos diagramas C4 níveis 1, 2 e 3 apresentados na seção 5.1. Disponível em: <https://c4model.com/>
 
-### 8.3 Documentação Oficial das Tecnologias Utilizadas (todas presentes no `package.json` dos repositórios — vide seção 5.4)
+## 8.3 Documentação Oficial das Tecnologias Utilizadas (todas presentes no `package.json` dos repositórios — vide seção 5.4)
 
 - **NestJS 11.** Framework do backend. <https://docs.nestjs.com/>
 - **Next.js 14 (App Router).** Framework do frontend. <https://nextjs.org/docs>
@@ -1026,35 +1038,36 @@ Lista exclusivamente as fontes efetivamente utilizadas neste documento — norma
 - **axios.** Cliente HTTP do frontend. <https://axios-http.com/docs/intro>
 - **Docker / Docker Compose.** Orquestração local. <https://docs.docker.com/compose/>
 
-### 8.4 Infraestrutura Blockchain Utilizada (seções 5.1 e 5.2)
+## 8.4 Infraestrutura Blockchain Utilizada (seções 5.1 e 5.2)
 
 - **Ethereum Sepolia Testnet.** Rede de testes pública onde o `DocumentRegistry.sol` é implantado. <https://ethereum.org/en/developers/docs/networks/#sepolia>
 - **Sepolia Etherscan.** Explorador público de transações usado para verificação independente do `txHash`. <https://sepolia.etherscan.io/>
 - **Provider RPC.** Acesso à Sepolia via Alchemy (<https://www.alchemy.com/>) ou Infura (<https://www.infura.io/>), configurado em `RPC_URL`.
 
-### 8.5 Repositório do Projeto
+## 8.5 Repositório do Projeto
 
 - **Monorepo do TCC:** <https://github.com/cursebearer/Projeto-Portifolio> — contém os três sub-projetos (`docchain-contracts/`, `docchain-api/`, `docchain-web/`), o diretório `planning/` com os 9 documentos de planejamento e o diretório `RFC docs/` com esta RFC e seus artefatos visuais.
 
-### 8.6 Modelo Institucional Adotado
+## 8.6 Modelo Institucional Adotado
 
 - **CATÓLICA SC.** *Modelo de RFC — The Portfolio Playbook.* Estrutura de 10 seções seguida por este documento. Disponível em: <https://github.com/CatolicaSC-Portfolio/The-Portfolio-Playbook/blob/main/documentation/RFC/modelo-de-RFC.md>
 
 ---
 
-## 9. Apêndices
+# 9. Apêndices
 
-### Apêndice A — Artefatos Visuais
+## Apêndice A — Artefatos Visuais
 
 Todos os diagramas referenciados ao longo desta RFC estão disponíveis em alta resolução na pasta `RFC docs/artefatos_visuais/` do repositório.
 
-**Engenharia de Requisitos / Comportamento:**
+**Engenharia de Requisitos / Comportamento / UX:**
 - `1 - Diagrama de Casos de Uso (UML).png`
 - `2 - Diagrama de Sequência — Fluxo Principal.png`
 - `3 - Fluxograma — Fluxo Principal.png`
 - `4. Fluxograma — Verificação Pública.png`
 - `5. Diagrama de Atividade — Erros E01 e E02.png`
 - `6. Fluxo de Navegação (entre telas).png`
+- `12. Estrutura de Navegação.png` *(novo na v1.2 — sitemap com rotas públicas/protegidas e guarda de cookie)*
 
 **Mockups de UI (telas-chave):**
 - `7 - login.png`
@@ -1070,7 +1083,7 @@ Todos os diagramas referenciados ao longo desta RFC estão disponíveis em alta 
 - `10. C4 — Nível 3 (Componentes do docchain-api).png`
 - `11. DER (Diagrama Entidade-Relacionamento).png`
 
-### Apêndice B — Estrutura do Repositório
+## Apêndice B — Estrutura do Repositório
 
 ```
 Projeto-Portifolio/
@@ -1091,7 +1104,7 @@ Projeto-Portifolio/
 └── README.md
 ```
 
-### Apêndice C — Variáveis de Ambiente (exemplo)
+## Apêndice C — Variáveis de Ambiente (exemplo)
 
 ```env
 # docchain-api/.env
@@ -1113,7 +1126,7 @@ THROTTLE_TTL=60
 THROTTLE_LIMIT=10
 ```
 
-### Apêndice D — Comandos para Rodar o Projeto Localmente
+## Apêndice D — Comandos para Rodar o Projeto Localmente
 
 ```bash
 # Clonar o repositório
@@ -1132,7 +1145,7 @@ docker compose exec docchain-api npx prisma migrate deploy
 # - Swagger: http://localhost:3000/api/docs
 ```
 
-### Apêndice E — Glossário Resumido
+## Apêndice E — Glossário Resumido
 
 | Termo | Definição |
 |---|---|
@@ -1147,7 +1160,7 @@ docker compose exec docchain-api npx prisma migrate deploy
 
 ---
 
-## 10. Parecer do Comitê de Avaliação
+# 10. Parecer do Comitê de Avaliação
 
 *Seção reservada para preenchimento pelos professores avaliadores.*
 
@@ -1166,4 +1179,4 @@ ___________________________      ___________________________      ______________
 
 ---
 
-*Fim do documento — RFC DocChain v1.0*
+*Fim do documento — RFC DocChain v1.2*

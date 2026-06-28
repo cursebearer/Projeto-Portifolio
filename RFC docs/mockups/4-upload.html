@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>DocChain — Upload</title>
+<link rel="stylesheet" href="_shared.css">
+<link rel="stylesheet" href="_app-shell.css">
+<style>
+  .container { max-width: 720px; margin: 0 auto; }
+  .back-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0; margin-bottom: 16px; }
+  .back-btn:hover { color: var(--text); }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--surface);
+    margin-bottom: 20px;
+    transition: border-color 0.15s;
+  }
+  .dropzone:hover { border-color: var(--primary); }
+  .dropzone svg { margin-bottom: 16px; color: var(--primary); }
+  .dropzone-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .dropzone-sub { font-size: 13px; color: var(--text-muted); }
+
+  .file-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  .file-preview-icon { width: 44px; height: 44px; background: var(--primary-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .file-preview-info { flex: 1; }
+  .file-preview-name { font-weight: 500; font-size: 14px; color: var(--text); }
+  .file-preview-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .stepper { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 24px; }
+  .stepper-title { font-weight: 600; font-size: 16px; margin-bottom: 20px; color: var(--text); }
+  .step { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; }
+  .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; }
+  .step-icon.done { background: var(--accent-light); color: var(--accent); }
+  .step-icon.active { background: var(--primary-light); color: var(--primary); animation: spin 1.5s linear infinite; }
+  .step-icon.pending { background: var(--surface-2); color: var(--text-dim); }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .step-content .step-title { font-weight: 500; font-size: 14px; color: var(--text); }
+  .step-content .step-status { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .step.done .step-title { color: var(--accent); }
+  .step.active .step-title { color: var(--primary); font-weight: 600; }
+
+  .btn-action { width: 100%; padding: 14px; font-size: 15px; }
+  .warning-box {
+    background: var(--warning-light);
+    border-left: 3px solid var(--warning);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--warning);
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7eb6ff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span class="sidebar-logo-name">DocChain</span>
+    </div>
+    <a class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item active">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload
+    </a>
+    <div class="nav-spacer"></div>
+    <a class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </a>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <span style="font-size:13px;color:var(--text-muted)">rafael@docchain.dev</span>
+      <div class="avatar">RP</div>
+    </header>
+    <div class="content">
+      <div class="container">
+        <button class="back-btn">← Voltar ao Dashboard</button>
+        <div class="page-header">
+          <div>
+            <h1>Novo Documento</h1>
+            <div class="sub">Upload, hash SHA-256, criptografia AES-256-GCM e registro on-chain</div>
+          </div>
+        </div>
+
+        <div class="dropzone">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div class="dropzone-title">Arraste seu arquivo aqui ou clique para selecionar</div>
+          <div class="dropzone-sub">PDF, DOCX, imagens — máximo 50 MB</div>
+        </div>
+
+        <div class="file-preview">
+          <div class="file-preview-icon">📄</div>
+          <div class="file-preview-info">
+            <div class="file-preview-name">contrato-cliente-2026.pdf</div>
+            <div class="file-preview-meta">1.24 MB · application/pdf</div>
+          </div>
+          <button class="btn-ghost">✕</button>
+        </div>
+
+        <button class="btn-primary btn-action">Registrar na Blockchain</button>
+
+        <div class="stepper">
+          <div class="stepper-title">Processando registro on-chain</div>
+
+          <div class="step done">
+            <div class="step-icon done">✓</div>
+            <div class="step-content">
+              <div class="step-title">Calculando hash SHA-256</div>
+              <div class="step-status">Concluído — hash gerado em 0.3s</div>
+            </div>
+          </div>
+
+          <div class="step done">
+            <div class="step-icon done">✓</div>
+            <div class="step-content">
+              <div class="step-title">Criptografando (AES-256-GCM)</div>
+              <div class="step-status">Concluído — IV + authTag gerados</div>
+            </div>
+          </div>
+
+          <div class="step done">
+            <div class="step-icon done">✓</div>
+            <div class="step-content">
+              <div class="step-title">Salvando arquivo cifrado</div>
+              <div class="step-status">/uploads/0xab12...cd34.enc</div>
+            </div>
+          </div>
+
+          <div class="step active">
+            <div class="step-icon active">⟳</div>
+            <div class="step-content">
+              <div class="step-title">Registrando na blockchain Sepolia</div>
+              <div class="step-status">Aguardando confirmação do bloco... ~15s restantes</div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-icon pending">5</div>
+            <div class="step-content">
+              <div class="step-title">Aguardando confirmação on-chain</div>
+              <div class="step-status">Pendente</div>
+            </div>
+          </div>
+
+          <div class="warning-box">⚠ Não feche esta janela durante o processo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

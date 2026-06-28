@@ -1,0 +1,19 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+flowchart TB
+    Usuario(["fa:fa-user <b>Usuário</b><br/><i>Profissional autônomo, PME<br/>ou autenticado</i><br/>Registra e gerencia documentos"]):::person
+    Verificador(["fa:fa-user <b>Verificador Público</b><br/><i>Visitante anônimo</i><br/>Valida autenticidade<br/>de documento"]):::person
+
+    DocChain["<b>DocChain</b><br/><i>[Sistema]</i><br/>Plataforma SaaS open-source de<br/>registro documental com prova on-chain"]:::system
+
+    Sepolia["<b>Ethereum Sepolia Testnet</b><br/><i>[Sistema Externo]</i><br/>Rede blockchain pública.<br/>Hospeda DocumentRegistry.sol."]:::external
+    Etherscan["<b>Sepolia Etherscan</b><br/><i>[Sistema Externo]</i><br/>Explorador de transações.<br/>Verificação independente do txHash."]:::external
+
+    Usuario -->|"Faz upload, gerencia e<br/>exclui documentos<br/>[HTTPS]"| DocChain
+    Verificador -->|"Verifica autenticidade<br/>pública<br/>[HTTPS]"| DocChain
+    DocChain -->|"Registra hash SHA-256 e<br/>consulta verifyDocument<br/>[JSON-RPC / HTTPS]"| Sepolia
+    Usuario -.->|"Consulta tx (deep-link)<br/>[HTTPS]"| Etherscan
+    Verificador -.->|"Consulta tx (opcional)<br/>[HTTPS]"| Etherscan
+
+    classDef person fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2.5px,color:#0b1320
+    classDef system fill:#cfe2f3,stroke:#1f3b73,stroke-width:3px,color:#0b1320
+    classDef external fill:#f4cccc,stroke:#a33,stroke-width:2.5px,color:#0b1320

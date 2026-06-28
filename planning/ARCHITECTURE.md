@@ -26,13 +26,15 @@
               ┌─────────────────────────────┼──────────────────────────┐
               │                             │                          │
               ▼                             ▼                          ▼
-   ┌──────────────────┐      ┌──────────────────────┐    ┌────────────────────┐
-   │   PostgreSQL     │      │  Storage Local        │    │  Sepolia Testnet   │
-   │   (metadados)    │      │  /uploads/*.enc        │    │  (Smart Contract)  │
-   │                  │      │                        │    │                    │
-   │  documents       │      │  Fase 2: IPFS/Kubo    │    │  DocumentRegistry  │
-   │  users           │      │  localhost:5001        │    │  Solidity          │
-   └──────────────────┘      └──────────────────────┘    └────────────────────┘
+   ┌─────────────────────────┐  ┌──────────────────────┐    ┌────────────────────┐
+   │     PostgreSQL          │  │  Storage Local        │    │  Sepolia Testnet   │
+   │     (metadados)         │  │  /uploads/*.enc        │    │  (Smart Contract)  │
+   │                         │  │                        │    │                    │
+   │  users                  │  │  Futuro: IPFS/Kubo    │    │  DocumentRegistry  │
+   │  documents (soft-del.)  │  │  localhost:5001        │    │  Solidity          │
+   │  audit_logs (LGPD)      │  │                        │    │                    │
+   │  verification_attempts  │  │                        │    │                    │
+   └─────────────────────────┘  └──────────────────────┘    └────────────────────┘
 ```
 
 ---
@@ -64,24 +66,67 @@
 
 ### AuthModule
 ```
-Responsabilidade: autenticação e autorização
-Dependências: @nestjs/passport, @nestjs/jwt, bcrypt
-Expõe: POST /auth/login, POST /auth/register
+Responsabilidade: autenticação e autorização via cookie httpOnly
+Dependências: @nestjs/passport, @nestjs/jwt, bcrypt, cookie-parser
+Expõe: POST /auth/register, POST /auth/login, POST /auth/logout,
+       GET /auth/me, PATCH /auth/me, DELETE /auth/me, GET /auth/me/export
 Guards: JwtAuthGuard (aplicado globalmente nas rotas protegidas)
+
+Fluxo de auth:
+  - POST /auth/login → valida credenciais → Set-Cookie: access_token (HttpOnly, Secure, SameSite=Lax, Max-Age=900)
+  - JwtStrategy usa cookieExtractor (Passport) para ler o JWT do cookie, não do header Authorization
+  - POST /auth/logout → Set-Cookie: access_token=; Max-Age=0 (apaga)
+  - GET /auth/me → retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD Art. 18 acesso)
+  - PATCH /auth/me → atualiza name (LGPD Art. 18 correção; email imutável)
+  - DELETE /auth/me → elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (userId=NULL); on-chain permanece como hash órfão (LGPD Art. 18 eliminação)
+  - GET /auth/me/export → JSON com User + Documents para portabilidade (LGPD Art. 18 portabilidade)
 ```
 
 ### DocumentsModule
 ```
 Responsabilidade: orquestrar o fluxo completo do documento
-Dependências: StorageModule, BlockchainModule, CryptoService, PrismaService
-Expõe: POST /documents, GET /documents, GET /documents/:id, POST /documents/verify
-Fluxo interno:
+Dependências: StorageModule, BlockchainModule, CryptoService, PrismaService, AuditLogService
+Expõe: POST /documents, GET /documents, GET /documents/:id,
+       DELETE /documents/:id, POST /documents/verify, GET /documents/:id/download,
+       GET /verify/public/:hash
+Fluxo interno (upload):
   1. Recebe multipart/form-data
   2. Chama CryptoService.hash(buffer)
   3. Chama CryptoService.encrypt(buffer)
   4. Chama StorageService.save(encryptedBuffer)
   5. Chama BlockchainService.register(hash, storageRef)
   6. Persiste metadados via PrismaService
+  7. Registra AuditLog (action UPLOAD)
+
+Fluxo interno (delete — RF22-24):
+  1. Marca Document.deletedAt = now()
+  2. StorageService.delete(`${hash}.enc`)
+  3. AuditLog.create(action DELETE, metadata { hash, fileName })
+  4. Registro on-chain permanece imutável
+```
+
+### AuditLogModule
+```
+Responsabilidade: trilha de auditoria das ações sensíveis (LGPD + investigação)
+Expõe: AuditLogService (injetável)
+Métodos:
+  - log(action, userId?, resourceType?, resourceId?, metadata?, ipAddress?, userAgent?)
+Persistência: tabela audit_logs (Prisma)
+```
+
+### VerificationAttemptModule
+```
+Responsabilidade: log de toda chamada a /verify (público ou privado) — analytics e anti-abuso
+Expõe: VerificationAttemptService (injetável)
+Métodos:
+  - record(hash, found, source, documentId?, userId?, ipAddress?, userAgent?)
+Persistência: tabela verification_attempts (Prisma)
+```
+
+### Interceptor global (RequestContextInterceptor)
+```
+Responsabilidade: capturar ipAddress + userAgent de cada request e expor via REQUEST scope
+Usado por: AuditLogService, VerificationAttemptService
 ```
 
 ### BlockchainModule
@@ -185,7 +230,9 @@ users
   id (UUID)
   email (unique)
   password_hash
+  name
   created_at
+  updated_at
 
 documents
   id (UUID)
@@ -202,9 +249,36 @@ documents
   tx_hash (hash da transação blockchain)
   network (default: sepolia)
   wallet_address
+  block_number
   status (PENDING | PROCESSING | CONFIRMED | FAILED)
+  error_message
   uploaded_at
   confirmed_at
+  updated_at
+  deleted_at  ← soft-delete (RF22-24); on-chain permanece
+
+audit_logs                                  ← LGPD + investigação
+  id (UUID)
+  user_id (FK → users.id, NULL em ações públicas)
+  action (LOGIN | LOGOUT | REGISTER | UPLOAD | DOWNLOAD | DELETE |
+          VERIFY_PUBLIC | VERIFY_PRIVATE)
+  resource_type
+  resource_id
+  ip_address
+  user_agent
+  metadata (JSONB)
+  created_at
+
+verification_attempts                       ← analytics + anti-abuso
+  id (UUID)
+  hash (SHA-256 consultado)
+  found (bool — true se hash existe on-chain)
+  document_id (FK → documents.id, NULL se hash desconhecido)
+  user_id (FK → users.id, NULL para PUBLIC)
+  source (PUBLIC | PRIVATE)
+  ip_address
+  user_agent
+  created_at
 ```
 
 ---
@@ -218,7 +292,12 @@ documents
 | IV e authTag salvos no banco | Necessários para descriptografia — sem eles o arquivo não pode ser recuperado |
 | ENCRYPTION_KEY em variável de ambiente | Nunca hardcoded, nunca no repositório |
 | PRIVATE_KEY da wallet em variável de ambiente | Idem — carteira usada apenas pelo backend para assinar transações |
-| JWT com expiração curta (15min access + refresh) | Padrão SaaS seguro |
+| JWT com expiração curta (15min access) | Padrão SaaS seguro |
+| JWT em **cookie httpOnly** (Secure, SameSite=Lax) — nunca exposto ao JS | Proteção contra XSS; token inacessível via `document.cookie` |
+| Validação regex `^[a-fA-F0-9]{64}$` no hash de `/verify/public` antes de RPC | Defesa contra abuso de RPC e custo desnecessário (RF19, E07) |
+| Soft-delete (`deletedAt`) — não apaga o registro fisicamente | Preserva trilha de auditoria mesmo após exclusão pelo usuário (LGPD) |
+| Registro on-chain permanece após delete local | Blockchain é imutável por natureza — backend não tenta "apagar" tx Sepolia |
+| `AuditLog` + `VerificationAttempt` em tabelas separadas | Compliance LGPD (rastreabilidade) + analytics anti-abuso |
 
 ---
 

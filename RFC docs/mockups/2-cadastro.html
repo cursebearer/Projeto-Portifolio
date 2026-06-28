@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>DocChain — Criar Conta</title>
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(1200px 600px at 80% 10%, rgba(126,182,255,0.10), transparent 60%),
+      radial-gradient(900px 500px at 20% 90%, rgba(111,220,140,0.06), transparent 60%),
+      var(--bg);
+  }
+  .register-card {
+    width: 460px;
+    padding: 40px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    background: var(--surface);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .logo-name { font-size: 22px; font-weight: 700; color: var(--primary); letter-spacing: -0.01em; }
+  .shield { color: var(--primary); }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .strength { display: flex; gap: 4px; margin-top: 8px; }
+  .strength-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); }
+  .strength-bar.s1 { background: var(--danger); }
+  .strength-bar.s2 { background: var(--warning); }
+  .strength-bar.s3 { background: var(--accent); }
+  .strength-text { font-size: 12px; color: var(--accent); margin-top: 6px; font-weight: 500; }
+  .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; font-size: 13px; color: var(--text-muted); }
+  .checkbox-row input { margin-top: 2px; accent-color: var(--primary); }
+  .checkbox-row a { color: var(--primary); text-decoration: none; }
+  .btn-primary { width: 100%; padding: 12px; font-size: 14px; }
+  .login-link { text-align: center; font-size: 14px; color: var(--text-muted); margin-top: 20px; }
+  .login-link a { color: var(--primary); font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="card register-card">
+    <div class="logo">
+      <svg class="shield" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span class="logo-name">DocChain</span>
+    </div>
+    <h1>Criar conta</h1>
+    <div class="sub">Comece a registrar seus documentos em minutos</div>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input class="input" type="text" placeholder="João Silva">
+    </div>
+
+    <div class="field">
+      <label>E-mail</label>
+      <input class="input" type="email" placeholder="voce@exemplo.com">
+    </div>
+
+    <div class="field">
+      <label>Senha</label>
+      <input class="input" type="password" placeholder="Mínimo 8 caracteres" value="MinhaSenh@2026">
+      <div class="strength">
+        <div class="strength-bar s3"></div>
+        <div class="strength-bar s3"></div>
+        <div class="strength-bar s3"></div>
+      </div>
+      <div class="strength-text">✓ Senha forte</div>
+    </div>
+
+    <div class="field">
+      <label>Confirmar senha</label>
+      <input class="input" type="password" value="MinhaSenh@2026">
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" checked>
+      <span>Li e aceito os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a></span>
+    </div>
+
+    <button class="btn-primary">Criar conta</button>
+
+    <div class="login-link">
+      Já tenho conta — <a href="#">Entrar</a>
+    </div>
+  </div>
+</body>
+</html>

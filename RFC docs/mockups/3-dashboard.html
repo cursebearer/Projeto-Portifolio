@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>DocChain — Dashboard</title>
+<link rel="stylesheet" href="_shared.css">
+<link rel="stylesheet" href="_app-shell.css">
+<style>
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat { padding: 20px; border-left: 4px solid var(--primary); }
+  .stat.success { border-left-color: var(--accent); }
+  .stat.warning { border-left-color: var(--warning); }
+  .stat-label { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; font-weight: 500; }
+  .stat-value { font-size: 30px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .stat-value.success { color: var(--accent); }
+  .stat-value.warning { color: var(--warning); }
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; }
+  .filters .input { flex: 1; max-width: 360px; }
+  .filters select { max-width: 220px; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text); }
+  tbody tr:first-child td { border-top: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  .file-cell { display: flex; align-items: center; gap: 12px; }
+  .file-icon { width: 34px; height: 34px; background: var(--primary-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 16px; }
+  .hash-cell { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+  .copy-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 2px; font-size: 13px; }
+  .copy-btn:hover { color: var(--text); }
+  .pagination { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-top: 1px solid var(--border); background: var(--surface); }
+  .pagination-info { color: var(--text-muted); font-size: 13px; }
+  .pagination-buttons { display: flex; gap: 6px; }
+  .page-btn { padding: 6px 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .page-btn:hover:not(.active) { background: var(--border); }
+  .page-btn.active { background: var(--primary); color: #0b1320; border-color: var(--primary); font-weight: 600; }
+  .action-btn { background: transparent; border: none; cursor: pointer; padding: 6px; color: var(--text-muted); font-size: 16px; }
+  .action-btn:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7eb6ff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span class="sidebar-logo-name">DocChain</span>
+    </div>
+    <a class="nav-item active">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload
+    </a>
+    <div class="nav-spacer"></div>
+    <a class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </a>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <span style="font-size:13px;color:var(--text-muted)">rafael@docchain.dev</span>
+      <div class="avatar">RP</div>
+    </header>
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h1>Meus Documentos</h1>
+          <div class="sub">Gerencie e verifique documentos registrados na blockchain</div>
+        </div>
+        <button class="btn-primary">+ Novo Upload</button>
+      </div>
+
+      <div class="stats">
+        <div class="card stat">
+          <div class="stat-label">Total de Documentos</div>
+          <div class="stat-value">47</div>
+        </div>
+        <div class="card stat success">
+          <div class="stat-label">Confirmados on-chain</div>
+          <div class="stat-value success">42</div>
+        </div>
+        <div class="card stat warning">
+          <div class="stat-label">Pendentes</div>
+          <div class="stat-value warning">5</div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input class="input" placeholder="🔍  Buscar por nome ou hash...">
+        <select>
+          <option>Todos os status</option>
+          <option>Confirmado</option>
+          <option>Pendente</option>
+          <option>Processando</option>
+          <option>Falhou</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome do arquivo</th>
+              <th>Hash (SHA-256)</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="file-cell"><div class="file-icon">📄</div>contrato-cliente-2026.pdf</div></td>
+              <td><div class="hash-cell">0xab12...cd34<button class="copy-btn">⎘</button></div></td>
+              <td><span class="badge badge-success">✓ Confirmado</span></td>
+              <td>há 3 dias</td>
+              <td><button class="action-btn">⋯</button></td>
+            </tr>
+            <tr>
+              <td><div class="file-cell"><div class="file-icon">📄</div>parecer-juridico-001.pdf</div></td>
+              <td><div class="hash-cell">0x9f86...8d34<button class="copy-btn">⎘</button></div></td>
+              <td><span class="badge badge-success">✓ Confirmado</span></td>
+              <td>há 5 dias</td>
+              <td><button class="action-btn">⋯</button></td>
+            </tr>
+            <tr>
+              <td><div class="file-cell"><div class="file-icon">📊</div>relatorio-mensal-jun.xlsx</div></td>
+              <td><div class="hash-cell">0x4e07...912a<button class="copy-btn">⎘</button></div></td>
+              <td><span class="badge badge-info">⟳ Processando</span></td>
+              <td>há 1 hora</td>
+              <td><button class="action-btn">⋯</button></td>
+            </tr>
+            <tr>
+              <td><div class="file-cell"><div class="file-icon">📄</div>laudo-tecnico-final.pdf</div></td>
+              <td><div class="hash-cell">0xc1ff...22a8<button class="copy-btn">⎘</button></div></td>
+              <td><span class="badge badge-warning">⏱ Pendente</span></td>
+              <td>há 12 min</td>
+              <td><button class="action-btn">⋯</button></td>
+            </tr>
+            <tr>
+              <td><div class="file-cell"><div class="file-icon">📄</div>procuracao-2026.pdf</div></td>
+              <td><div class="hash-cell">0x6b48...77e9<button class="copy-btn">⎘</button></div></td>
+              <td><span class="badge badge-success">✓ Confirmado</span></td>
+              <td>há 2 semanas</td>
+              <td><button class="action-btn">⋯</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="pagination-info">Exibindo 1–5 de 47 documentos</div>
+          <div class="pagination-buttons">
+            <button class="page-btn">Anterior</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">Próxima</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

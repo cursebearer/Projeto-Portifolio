@@ -1,0 +1,58 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam dpi 200
+skinparam shadowing false
+skinparam defaultFontSize 14
+skinparam ActorBackgroundColor #FDF6E3
+skinparam ActorBorderColor #8A6D3B
+skinparam ActorFontColor #0B1320
+skinparam UsecaseBackgroundColor #E8F4FF
+skinparam UsecaseBorderColor #1F3B73
+skinparam UsecaseFontColor #0B1320
+skinparam PackageBackgroundColor transparent
+skinparam PackageBorderColor #1F3B73
+skinparam ArrowColor #1F3B73
+skinparam NoteBackgroundColor #FFF7E0
+skinparam NoteBorderColor #A06B00
+
+title Diagrama de Casos de Uso — DocChain
+
+left to right direction
+
+actor "Visitante" as Visitante
+actor "Usuário\nAutenticado" as Usuario
+actor "Sistema\nBlockchain\n(Sepolia)" as Blockchain <<external>>
+
+rectangle "Sistema DocChain" {
+  usecase "UC01\nCriar Conta" as UC01
+  usecase "UC02\nRealizar Login" as UC02
+  usecase "UC03\nFazer Upload\nde Documento" as UC03
+  usecase "UC04\nVisualizar\nDashboard" as UC04
+  usecase "UC05\nVisualizar Detalhe\ndo Documento" as UC05
+  usecase "UC06\nVerificar\nIntegridade (Privada)" as UC06
+  usecase "UC07\nBaixar Documento\nDescriptografado" as UC07
+  usecase "UC08\nVerificar Documento\nPublicamente" as UC08
+  usecase "UC09\nRegistrar\nHash on-chain" as UC09
+  usecase "UC10\nConfirmar Registro\non-chain" as UC10
+  usecase "UC11\nExcluir Documento" as UC11
+}
+
+Visitante --> UC01
+Visitante --> UC02
+Visitante --> UC08
+
+Usuario --> UC03
+Usuario --> UC04
+Usuario --> UC05
+Usuario --> UC06
+Usuario --> UC07
+Usuario --> UC11
+
+UC03 ..> UC09 : <<include>>
+UC09 ..> UC10 : <<include>>
+
+UC09 --> Blockchain
+UC10 <-- Blockchain
+UC08 --> Blockchain
+
+@enduml

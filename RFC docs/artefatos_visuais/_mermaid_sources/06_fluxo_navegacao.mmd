@@ -1,0 +1,29 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+flowchart TB
+    Start([Entrada]):::start
+    Verify["/verify<br/>(entrada independente,<br/>sem login)"]:::pub
+    Login["/login"]:::pub
+    Register["/register"]:::pub
+    Dashboard["/dashboard"]:::priv
+    Upload["/upload"]:::priv
+    Detail["/documents/[id]"]:::priv
+    Logout(["Logout — cookie<br/>access_token apagado<br/>(Max-Age=0)"]):::terminal
+
+    Start --> Login
+    Start -.->|"link externo"| Verify
+    Login -- "link 'Criar conta'" --> Register
+    Register -- "submit + auto-login<br/>(cookie httpOnly emitido)" --> Dashboard
+    Login -- "credenciais válidas<br/>(Set-Cookie httpOnly)" --> Dashboard
+    Dashboard -- "botão 'Novo Upload'" --> Upload
+    Upload -- "sucesso (201)" --> Dashboard
+    Upload -. "alternativo:<br/>após confirmação" .-> Detail
+    Dashboard -- "clica num doc" --> Detail
+    Detail -- "voltar" --> Dashboard
+    Detail -- "DELETE soft (RF22-24)" --> Dashboard
+    Dashboard -- "POST /auth/logout" --> Logout
+    Logout -. "redirect" .-> Login
+
+    classDef start fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2.5px,color:#0b1320
+    classDef pub fill:#e8f4ff,stroke:#1f3b73,stroke-width:2.5px,color:#0b1320
+    classDef priv fill:#e3fae3,stroke:#2e6b3c,stroke-width:2.5px,color:#0b1320
+    classDef terminal fill:#ececec,stroke:#444,stroke-width:2.5px,color:#0b1320

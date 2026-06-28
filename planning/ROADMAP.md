@@ -12,25 +12,25 @@ Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4
 
 ---
 
-## Fase 0 — Setup e Infraestrutura (1 dia)
+## Fase 0 — Setup e Infraestrutura (1 dia) ✅ CONCLUÍDA
 
 **Objetivo:** Ambiente de desenvolvimento 100% funcional antes de escrever qualquer código de produto.
 
 ### 0.1 Criar repositórios
-- [ ] `docchain-contracts` — inicializar com Hardhat
-- [ ] `docchain-api` — inicializar com NestJS CLI
-- [ ] `docchain-web` — inicializar com Next.js 14 (App Router)
+- [x] `docchain-contracts` — inicializar com Hardhat
+- [x] `docchain-api` — inicializar com NestJS CLI
+- [x] `docchain-web` — inicializar com Next.js 14 (App Router)
 
 ### 0.2 Docker Compose base
-- [ ] Serviço `postgres` com volume persistente
-- [ ] Serviço `api` apontando para `docchain-api`
-- [ ] `.env.example` em cada repositório com todas as variáveis necessárias
+- [x] Serviço `postgres` com volume persistente
+- [x] Serviço `api` apontando para `docchain-api`
+- [x] `.env.example` em cada repositório com todas as variáveis necessárias
 
 ### 0.3 Configuração inicial de cada repo
-- [ ] TypeScript strict mode em todos
-- [ ] ESLint + Prettier configurados
-- [ ] Prisma inicializado no `docchain-api` com conexão ao PostgreSQL do Docker
-- [ ] Hardhat configurado com rede Sepolia (via Infura/Alchemy)
+- [x] TypeScript strict mode em todos
+- [x] ESLint + Prettier configurados
+- [x] Prisma inicializado no `docchain-api` com conexão ao PostgreSQL do Docker
+- [x] Hardhat configurado com rede Sepolia (via Infura/Alchemy)
 
 ### Critério de conclusão da Fase 0
 ```bash
@@ -86,16 +86,21 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 ### 2.1 Configuração base (dia 1)
 - [ ] ConfigModule com validação de env vars (joi ou zod)
 - [ ] PrismaModule global com PrismaService
-- [ ] Migrations iniciais (tabelas `users` e `documents`)
+- [ ] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
 - [ ] Multer configurado para upload em memória (memoryStorage)
 - [ ] Pasta `/uploads` mapeada como volume
+- [ ] `cookie-parser` middleware registrado
 
 ### 2.2 AuthModule (dia 1-2)
 - [ ] `POST /auth/register` — cria usuário com senha hasheada (bcrypt)
-- [ ] `POST /auth/login` — valida credenciais, retorna JWT access_token
-- [ ] JwtStrategy + JwtAuthGuard
+- [ ] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=900`); **não retorna token no body**
+- [ ] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
+- [ ] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
+- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável)
+- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação)
+- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade)
+- [ ] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
 - [ ] Decorador `@CurrentUser()` para extrair usuário do token
-- [ ] Refresh token (opcional para TCC, recomendado para SaaS)
 
 ### 2.3 CryptoService (dia 2)
 - [ ] `hashFile(buffer: Buffer): string` — SHA-256 hex
@@ -117,13 +122,20 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [ ] Testes de integração com contrato (pode usar fork local do Hardhat)
 
 ### 2.6 DocumentsModule (dia 3-4)
-- [ ] `POST /documents` — fluxo completo de upload
-- [ ] `GET /documents` — lista documentos do usuário autenticado (paginado)
+- [ ] `POST /documents` — fluxo completo de upload + AuditLog UPLOAD
+- [ ] `GET /documents` — lista documentos do usuário (paginado, `deletedAt IS NULL`)
 - [ ] `GET /documents/:id` — detalhe de um documento
-- [ ] `POST /documents/verify` — verificação de integridade
-- [ ] `GET /documents/:id/download` — retorna arquivo descriptografado (autenticado)
+- [ ] `DELETE /documents/:id` — soft-delete (`deletedAt = now()`) + remove arquivo cifrado + AuditLog DELETE (RF22-24)
+- [ ] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
+- [ ] `GET /verify/public/:hash` — verificação pública + validação regex `^[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
+- [ ] `GET /documents/:id/download` — arquivo descriptografado + AuditLog DOWNLOAD
 - [ ] DTOs com validação (class-validator)
 - [ ] Tratamento de erros com filtros globais
+
+### 2.6b AuditLog + VerificationAttempt (dia 4)
+- [ ] `AuditLogService` — método `log(action, userId?, ...)`
+- [ ] `VerificationAttemptService` — método `record(hash, found, source, ...)`
+- [ ] `RequestContextInterceptor` global — captura ipAddress + userAgent
 
 ### 2.7 Polish e documentação (dia 5)
 - [ ] Swagger configurado (`@nestjs/swagger`)
@@ -158,8 +170,9 @@ Via Postman/Insomnia, executar o fluxo completo:
 ### 3.2 Autenticação (dia 1)
 - [ ] Página `/login` — formulário email + senha
 - [ ] Página `/register` — formulário de cadastro
-- [ ] Armazenamento de token (httpOnly cookie via API Route ou localStorage para TCC)
-- [ ] Context/Store de auth (Zustand ou Context API)
+- [ ] axios configurado com `withCredentials: true` (cookie enviado automaticamente)
+- [ ] Zustand store guarda apenas user metadata; hidrata via `GET /auth/me` após login
+- [ ] Logout via `POST /auth/logout` (backend apaga cookie)
 
 ### 3.3 Dashboard (dia 2)
 - [ ] Página `/dashboard` — lista de documentos do usuário
@@ -184,6 +197,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - Botão "Verificar Integridade" — abre dropzone inline
   - Resultado da verificação com ícone visual (check verde / x vermelho)
   - Botão de download (arquivo descriptografado)
+  - Botão "Excluir" → AlertDialog com aviso "registro on-chain permanece imutável" → `DELETE /documents/:id` (RF22-24)
 
 ### 3.6 Verificação pública (dia 3-4)
 - [ ] Página `/verify` — verificação sem autenticação
@@ -234,7 +248,7 @@ Executar o fluxo completo via browser:
 
 | Fase | Tempo | Status |
 |---|---|---|
-| Fase 0 — Setup | 1 dia | ⬜ Não iniciado |
+| Fase 0 — Setup | 1 dia | ✅ Concluída |
 | Fase 1 — Smart Contract | 2 dias | ⬜ Não iniciado |
 | Fase 2 — Backend | 5 dias | ⬜ Não iniciado |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |

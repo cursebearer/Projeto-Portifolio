@@ -1,0 +1,62 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'14px'}}}%%
+erDiagram
+    USER ||--o{ DOCUMENT : "possui"
+    USER ||--o{ AUDIT_LOG : "gera"
+    USER ||--o{ VERIFICATION_ATTEMPT : "executa (privada)"
+    DOCUMENT ||--o{ VERIFICATION_ATTEMPT : "alvo de"
+
+    USER {
+        uuid id PK
+        varchar email UK "NOT NULL"
+        varchar passwordHash "bcrypt cost 12"
+        varchar name "NOT NULL"
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    DOCUMENT {
+        uuid id PK
+        uuid userId FK "INDEX"
+        varchar fileName
+        varchar mimeType
+        int size
+        varchar hash UK "SHA-256 64 hex, INDEX"
+        varchar storageRef
+        enum storageType "LOCAL|IPFS"
+        varchar encryptionIv "12 bytes hex"
+        varchar encryptionAuthTag "16 bytes hex"
+        enum status "PENDING|PROCESSING|CONFIRMED|FAILED"
+        varchar network "sepolia"
+        varchar txHash "NULLABLE"
+        bigint blockNumber "NULLABLE"
+        varchar walletAddress "NULLABLE"
+        timestamp confirmedAt "NULLABLE"
+        text failureReason "NULLABLE"
+        timestamp deletedAt "NULLABLE (soft-delete, RF22)"
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    AUDIT_LOG {
+        uuid id PK
+        uuid userId FK "NULL p/ ações públicas"
+        enum action "LOGIN|LOGOUT|REGISTER|UPLOAD|DOWNLOAD|DELETE|VERIFY_PUBLIC|VERIFY_PRIVATE"
+        varchar resourceType "document|user"
+        uuid resourceId
+        varchar ipAddress
+        varchar userAgent
+        jsonb metadata
+        timestamp createdAt "INDEX"
+    }
+
+    VERIFICATION_ATTEMPT {
+        uuid id PK
+        varchar hash "SHA-256, INDEX"
+        boolean found "true se existe on-chain"
+        uuid documentId FK "NULLABLE"
+        uuid userId FK "NULL p/ pública"
+        enum source "PUBLIC|PRIVATE"
+        varchar ipAddress
+        varchar userAgent
+        timestamp createdAt "INDEX"
+    }

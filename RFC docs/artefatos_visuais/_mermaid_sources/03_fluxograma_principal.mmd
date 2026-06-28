@@ -1,0 +1,45 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+flowchart TB
+    Start([Início]):::start
+
+    subgraph Frontend["FRONTEND (docchain-web)"]
+        direction LR
+        F1["1. Login<br/>(cookie httpOnly<br/>emitido)"]:::step
+        F2["2. Acesso a<br/>/upload"]:::step
+        F3["3. Seleção do<br/>arquivo<br/>(max 50 MB)"]:::step
+        F4["4. Clique<br/>'Registrar na<br/>Blockchain'"]:::step
+        F5["5. POST<br/>/documents<br/>(multipart +<br/>cookie auto)"]:::step
+        F1 --> F2 --> F3 --> F4 --> F5
+    end
+
+    Guard{"6. JwtAuthGuard — cookieExtractor valida cookie + JWT?"}:::decision
+    Reject["401 Unauthorized<br/>redirect /login"]:::error
+
+    subgraph Backend["BACKEND (docchain-api) — pipeline de processamento"]
+        direction LR
+        B7["7. INSERT<br/>Document<br/>status=PENDING"]:::step
+        B8["8. CryptoService<br/>.hashFile<br/>SHA-256 do<br/>original"]:::step
+        B9["9. CryptoService<br/>.encrypt<br/>AES-256-GCM<br/>(IV + authTag)"]:::step
+        B10["10. StorageService<br/>.save<br/>/uploads/<br/>{hash}.enc"]:::step
+        B11["11. BlockchainService<br/>.registerDocument<br/>tx Sepolia +<br/>1 confirmação"]:::step
+        B7 --> B8 --> B9 --> B10 --> B11
+    end
+
+    ChainOk{"Sucesso on-chain?"}:::decision
+    Update["12. UPDATE Document<br/>status=CONFIRMED<br/>+ txHash, blockNumber, iv, authTag"]:::step
+    Failed["UPDATE Document<br/>status=FAILED<br/>+ failureReason"]:::error
+    Done([Tela de sucesso — hash + link Etherscan]):::done
+
+    Start --> Frontend
+    Frontend --> Guard
+    Guard -- "não" --> Reject
+    Guard -- "sim" --> Backend
+    Backend --> ChainOk
+    ChainOk -- "sim" --> Update --> Done
+    ChainOk -- "não" --> Failed
+
+    classDef start fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2.5px,color:#0b1320
+    classDef step fill:#cfe2f3,stroke:#1f3b73,stroke-width:2.5px,color:#0b1320
+    classDef decision fill:#fff2cc,stroke:#a06b00,stroke-width:2.5px,color:#0b1320
+    classDef error fill:#f4cccc,stroke:#a33,stroke-width:2.5px,color:#0b1320
+    classDef done fill:#d9ead3,stroke:#2e6b3c,stroke-width:2.5px,color:#0b1320

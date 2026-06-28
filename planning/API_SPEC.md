@@ -7,10 +7,14 @@ Swagger UI:  http://localhost:3000/api/docs
 ```
 
 ## Autenticação
-Todas as rotas marcadas com 🔒 requerem header:
+Todas as rotas marcadas com 🔒 requerem **cookie httpOnly** `access_token` enviado automaticamente pelo navegador.
+
+O backend emite o cookie em `POST /auth/login` via header:
 ```
-Authorization: Bearer {access_token}
+Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900
 ```
+
+O frontend deve configurar o axios com `withCredentials: true` para que o navegador anexe o cookie nas requisições subsequentes. O JWT **nunca** é exposto ao JavaScript do frontend.
 
 ---
 
@@ -45,7 +49,7 @@ Cria novo usuário.
 ---
 
 ### POST /auth/login
-Autentica usuário e retorna JWT.
+Autentica usuário e emite cookie httpOnly. **Não retorna o token no corpo.**
 
 **Body:**
 ```json
@@ -56,9 +60,11 @@ Autentica usuário e retorna JWT.
 ```
 
 **Response 200:**
+```
+Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900
+```
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "uuid",
     "email": "user@example.com",
@@ -69,6 +75,113 @@ Autentica usuário e retorna JWT.
 
 **Erros:**
 - `401` — credenciais inválidas
+
+---
+
+### POST /auth/logout 🔒
+Encerra a sessão descartando o cookie no navegador.
+
+**Response 204:**
+```
+Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
+```
+
+---
+
+### GET /auth/me 🔒
+Retorna dados do usuário autenticado (usado pelo frontend para hidratar o Zustand store após login, já que o JWT vive apenas no cookie httpOnly). Também atende o direito de **confirmação/acesso** (LGPD Art. 18, I-II).
+
+**Response 200:**
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "name": "Nome",
+  "createdAt": "2026-01-01T00:00:00.000Z"
+}
+```
+
+**Erros:**
+- `401` — cookie ausente ou JWT expirado
+
+---
+
+### PATCH /auth/me 🔒
+Atualiza dados do usuário autenticado. Atende o direito de **correção** (LGPD Art. 18, III).
+
+Apenas `name` é editável. O `email` é imutável após cadastro para preservar a integridade da chave única.
+
+**Body:**
+```json
+{
+  "name": "Novo Nome"
+}
+```
+
+**Response 200:** (mesmo formato do GET /auth/me)
+
+**Erros:**
+- `400` — campo inválido
+- `401` — não autenticado
+
+---
+
+### DELETE /auth/me 🔒
+Elimina a conta do usuário e todos os seus dados pessoais. Atende o direito de **eliminação / anonimização** (LGPD Art. 18, VI) e a **revogação de consentimento**.
+
+Comportamento (executado em transação):
+1. Remove fisicamente os arquivos cifrados de `${UPLOAD_DIR}` correspondentes a `Document.storageRef` do usuário
+2. Deleta registros de `Document` em cascata via Prisma
+3. Anonimiza `AuditLog` e `VerificationAttempt` setando `userId = NULL` (registro operacional preservado, vínculo pessoal removido)
+4. Deleta o `User`
+5. Apaga o cookie de sessão (`Set-Cookie: access_token=; Max-Age=0`)
+
+**Observação on-chain:** o hash SHA-256 e o `walletAddress` do servidor permanecem registrados na Sepolia (imutável por natureza). Como o hash é função de mão única e o `walletAddress` é da wallet do servidor (não do usuário), o registro on-chain torna-se um **hash órfão** sem associação pessoal recuperável.
+
+**Response 204:** (sem body)
+
+**Erros:**
+- `401` — não autenticado
+
+---
+
+### GET /auth/me/export 🔒
+Retorna JSON com todos os dados pessoais do usuário. Atende o direito de **portabilidade** (LGPD Art. 18, V).
+
+**Response 200:**
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "Nome",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  "documents": [
+    {
+      "id": "uuid",
+      "fileName": "contrato.pdf",
+      "mimeType": "application/pdf",
+      "fileSize": 1024000,
+      "hash": "a3f5c8...",
+      "txHash": "0xabc...",
+      "network": "sepolia",
+      "blockNumber": 5847291,
+      "status": "CONFIRMED",
+      "uploadedAt": "2026-01-01T10:00:00.000Z",
+      "confirmedAt": "2026-01-01T10:00:15.000Z"
+    }
+  ]
+}
+```
+
+**Headers:**
+```
+Content-Disposition: attachment; filename="docchain-export-{userId}-{date}.json"
+```
+
+**Erros:**
+- `401` — não autenticado
 
 ---
 
@@ -217,6 +330,22 @@ documentId: string  (UUID do documento no sistema)
 
 ---
 
+### DELETE /documents/:id 🔒
+Exclui um documento aplicando **soft-delete** (RF22-24).
+
+Comportamento:
+1. Marca `Document.deletedAt = now()` no banco
+2. Remove fisicamente o arquivo cifrado de `${UPLOAD_DIR}/{hash}.enc`
+3. Registra ação em `AuditLog` (action `DELETE`, `resourceId = document.id`, `metadata = { hash, fileName }`)
+4. **Não altera o registro on-chain** — a transação na Sepolia é imutável; `/verify/public/:hash` continua retornando `exists: true`
+
+**Response 204:** (sem body)
+
+**Erros:**
+- `404` — documento não encontrado ou não pertence ao usuário
+
+---
+
 ### GET /documents/:id/download 🔒
 Retorna o arquivo original (descriptografado).
 
@@ -237,9 +366,11 @@ Content-Disposition: attachment; filename="contrato.pdf"
 ### GET /verify/public/:hash
 Verificação pública — sem autenticação. Consulta apenas a blockchain.
 
+**Validação (RF19, E07):** o backend valida o formato do hash **antes** de consultar a blockchain — exige exatamente 64 caracteres hexadecimais (regex `^[a-fA-F0-9]{64}$`). Hash inválido → `400 Bad Request` sem chamada on-chain (defesa contra abuso de RPC).
+
 **Params:**
 ```
-hash: string (SHA-256 hex do documento)
+hash: string (SHA-256 hex do documento — 64 chars [a-fA-F0-9])
 ```
 
 **Response 200:**
@@ -409,7 +540,11 @@ const config = new DocumentBuilder()
   .setTitle('DocChain API')
   .setDescription('API de registro e verificação de documentos com blockchain')
   .setVersion('1.0')
-  .addBearerAuth()
+  .addCookieAuth('access_token', {
+    type: 'apiKey',
+    in: 'cookie',
+    name: 'access_token',
+  })
   .build();
 
 const document = SwaggerModule.createDocument(app, config);

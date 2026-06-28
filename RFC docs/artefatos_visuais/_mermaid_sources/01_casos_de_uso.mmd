@@ -1,0 +1,40 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#fff','primaryTextColor':'#0b1320','primaryBorderColor':'#1f3b73','lineColor':'#1f3b73','fontSize':'15px'}}}%%
+graph LR
+    Visitante((Visitante)):::actor
+    Usuario((Usuário<br/>Autenticado)):::actor
+    Blockchain((Sistema<br/>Blockchain<br/>Sepolia)):::ext
+
+    subgraph Sistema["Sistema DocChain"]
+        direction TB
+        UC01(["UC01 — Criar Conta"]):::uc
+        UC02(["UC02 — Realizar Login"]):::uc
+        UC03(["UC03 — Fazer Upload<br/>de Documento"]):::uc
+        UC04(["UC04 — Visualizar<br/>Dashboard"]):::uc
+        UC05(["UC05 — Visualizar<br/>Detalhe do Documento"]):::uc
+        UC06(["UC06 — Verificar<br/>Integridade (Privada)"]):::uc
+        UC07(["UC07 — Baixar Documento<br/>Descriptografado"]):::uc
+        UC08(["UC08 — Verificar<br/>Documento Publicamente"]):::uc
+        UC09(["UC09 — Registrar<br/>Hash on-chain"]):::ucsys
+        UC10(["UC10 — Confirmar<br/>Registro on-chain"]):::ucsys
+        UC11(["UC11 — Excluir<br/>Documento"]):::uc
+    end
+
+    Visitante --- UC01
+    Visitante --- UC02
+    Visitante --- UC08
+    Usuario --- UC03
+    Usuario --- UC04
+    Usuario --- UC05
+    Usuario --- UC06
+    Usuario --- UC07
+    Usuario --- UC11
+    UC03 -. include .-> UC09
+    UC09 -. include .-> UC10
+    UC09 --- Blockchain
+    UC10 --- Blockchain
+    UC08 --- Blockchain
+
+    classDef actor fill:#fdf6e3,stroke:#8a6d3b,stroke-width:2px,color:#0b1320
+    classDef ext fill:#fef0d9,stroke:#a33,stroke-width:2px,color:#0b1320
+    classDef uc fill:#e8f4ff,stroke:#1f3b73,stroke-width:2px,color:#0b1320
+    classDef ucsys fill:#e3fae3,stroke:#2e6b3c,stroke-width:2px,color:#0b1320

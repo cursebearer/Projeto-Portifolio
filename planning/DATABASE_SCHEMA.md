@@ -103,6 +103,7 @@ model Document {
   uploadedAt      DateTime       @default(now()) @map("uploaded_at")
   confirmedAt     DateTime?      @map("confirmed_at")       // quando blockchain confirmou
   updatedAt       DateTime       @updatedAt @map("updated_at")
+  deletedAt       DateTime?      @map("deleted_at")         // soft-delete (RF22-24); registro on-chain permanece
 
   // Relações
   user                  User                  @relation(fields: [userId], references: [id])
@@ -111,6 +112,7 @@ model Document {
   @@index([userId])
   @@index([hash])
   @@index([status])
+  @@index([deletedAt])
   @@map("documents")
 }
 
@@ -240,16 +242,17 @@ await this.prisma.document.update({
 });
 ```
 
-### Listar documentos do usuário (paginado)
+### Listar documentos do usuário (paginado, excluindo soft-deleted)
 ```typescript
+const where = { userId, deletedAt: null };
 const [documents, total] = await this.prisma.$transaction([
   this.prisma.document.findMany({
-    where: { userId },
+    where,
     orderBy: { uploadedAt: 'desc' },
     skip: (page - 1) * limit,
     take: limit,
   }),
-  this.prisma.document.count({ where: { userId } })
+  this.prisma.document.count({ where })
 ]);
 ```
 
@@ -257,6 +260,61 @@ const [documents, total] = await this.prisma.$transaction([
 ```typescript
 const document = await this.prisma.document.findUnique({
   where: { hash }
+});
+```
+
+### Soft-delete de documento (RF22-24)
+```typescript
+// 1. Marca deletedAt no banco
+await this.prisma.document.update({
+  where: { id: documentId },
+  data: { deletedAt: new Date() },
+});
+
+// 2. Remove arquivo cifrado do disco
+await this.storageService.delete(`${document.hash}.enc`);
+
+// 3. Registra audit log
+await this.prisma.auditLog.create({
+  data: {
+    userId,
+    action: AuditAction.DELETE,
+    resourceType: 'document',
+    resourceId: documentId,
+    ipAddress,
+    userAgent,
+    metadata: { hash: document.hash, fileName: document.fileName },
+  },
+});
+```
+
+### Registrar audit log
+```typescript
+await this.prisma.auditLog.create({
+  data: {
+    userId,                          // null em ações públicas
+    action: AuditAction.UPLOAD,
+    resourceType: 'document',
+    resourceId: document.id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    metadata: { fileName, hash },
+  },
+});
+```
+
+### Registrar tentativa de verificação
+```typescript
+await this.prisma.verificationAttempt.create({
+  data: {
+    hash,
+    found: blockchainResult.exists,
+    documentId: document?.id ?? null,
+    userId: currentUser?.id ?? null,           // null para PUBLIC
+    source: currentUser ? VerificationSource.PRIVATE : VerificationSource.PUBLIC,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  },
 });
 ```
 

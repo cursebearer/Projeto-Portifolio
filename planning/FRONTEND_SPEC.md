@@ -36,6 +36,16 @@
 └──────────────────────────────────────────────────────┘
 ```
 
+### Estrutura de Navegação (RFC §4.1)
+
+O DocChain organiza rotas em duas regiões claramente separadas — **pública** (sem autenticação) e **protegida** (requer cookie httpOnly válido) — com um ponto único de guarda (Next.js Middleware).
+
+- **Bloco público:** `/login`, `/register`, `/verify` — navegação livre, sem cookie
+- **Bloco protegido:** `/dashboard`, `/upload`, `/documents/[id]` — hierarquia hub-and-spoke (`/dashboard` como hub)
+- **Guarda:** o middleware intercepta toda navegação em rota protegida; se o cookie `access_token` está ausente, redireciona para `/login` **antes** do render. A validação criptográfica do JWT é responsabilidade do backend — o middleware checa apenas a presença do cookie.
+
+Diagrama visual: `RFC docs/artefatos_visuais/12. Estrutura de Navegação.png`
+
 ### Proteção de rotas — `middleware.ts`
 ```typescript
 import { NextResponse } from 'next/server';
@@ -84,7 +94,8 @@ export const config = {
 ```
 
 **Comportamento:**
-- Ao logar com sucesso: armazena `access_token` em cookie httpOnly via API Route Next.js
+- Ao logar com sucesso: o backend responde com `Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Lax; Max-Age=900`. O cookie é setado automaticamente pelo navegador — o frontend **nunca** toca o token em JavaScript.
+- Após o login, chama `GET /auth/me` para hidratar o Zustand store com os dados do usuário (id, email, name).
 - Redireciona para `/dashboard`
 - Exibe toast de erro em credenciais inválidas
 
@@ -189,9 +200,14 @@ error       → mensagem de erro + botão tentar novamente
 │  │  Solte o arquivo aqui               │                   │
 │  └─────────────────────────────────────┘                   │
 │                                                             │
-│  [  Verificar  ]    [  Download  ]                         │
+│  [  Verificar  ]    [  Download  ]    [  Excluir  ]        │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Ação Excluir (RF22-24):**
+- Botão "Excluir" abre `<AlertDialog>` (shadcn) com aviso explícito: "Documento removido do dashboard. Registro on-chain permanece imutável."
+- Confirmação → `DELETE /documents/:id` → toast de sucesso → redirect para `/dashboard`
+- Documento some das listagens privadas, mas `/verify/public/:hash` continua retornando `exists: true`
 
 **Resultado de verificação (inline):**
 ```
@@ -266,16 +282,10 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
+  withCredentials: true, // navegador anexa cookie httpOnly automaticamente
 });
 
-// Interceptor: adiciona token automaticamente
-api.interceptors.request.use((config) => {
-  const token = getCookie('access_token'); // ou localStorage para TCC simples
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// Interceptor: redireciona para login em 401
+// Interceptor: redireciona para login em 401 (cookie ausente ou JWT expirado)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -289,12 +299,17 @@ api.interceptors.response.use(
 export default api;
 ```
 
+> O JWT vive apenas no cookie httpOnly. O JS do frontend **não lê nem escreve** o token — toda a autenticação é orquestrada pelo backend via `Set-Cookie`.
+
 ---
 
 ## Zustand Store (`store/auth.store.ts`)
 
+O store guarda apenas **metadados do usuário** — o JWT vive no cookie httpOnly e é inacessível ao JS. Logout é orquestrado pelo backend (`POST /auth/logout` apaga o cookie via `Set-Cookie: Max-Age=0`).
+
 ```typescript
 import { create } from 'zustand';
+import api from '@/lib/api';
 
 interface User {
   id: string;
@@ -305,19 +320,28 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
-  logout: () => void;
+  hydrate: () => Promise<void>;   // chama GET /auth/me após login
+  setUser: (user: User) => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  login: (user, token) => {
-    document.cookie = `access_token=${token}; path=/`;
-    set({ user, isAuthenticated: true });
+
+  hydrate: async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      set({ user: data, isAuthenticated: true });
+    } catch {
+      set({ user: null, isAuthenticated: false });
+    }
   },
-  logout: () => {
-    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+
+  setUser: (user) => set({ user, isAuthenticated: true }),
+
+  logout: async () => {
+    await api.post('/auth/logout'); // backend apaga o cookie
     set({ user: null, isAuthenticated: false });
     window.location.href = '/login';
   },
