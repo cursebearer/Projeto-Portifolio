@@ -4,7 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "export-abi": "hardhat run scripts/exportAbi.ts",
+    "verify:sepolia": "hardhat verify --network sepolia"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +24,7 @@
     "dotenv": "^17.3.1",
     "ethers": "^6.16.0",
     "hardhat": "^2.28.6",
+    "solidity-coverage": "^0.8.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
