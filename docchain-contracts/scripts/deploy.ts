@@ -58,11 +58,12 @@ async function main() {
     abi: artifactJson.abi,
   };
 
-  const outputDir = path.join(__dirname, "..", "artifacts");
-  const outputPath = path.join(outputDir, "deployment.json");
+  const outputDir = path.join(__dirname, "..", "deployments");
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, `${network.name}.json`);
   fs.writeFileSync(outputPath, JSON.stringify(deploymentInfo, null, 2));
 
-  console.log(`\n📄 Deployment info saved to: artifacts/deployment.json`);
+  console.log(`\n📄 Deployment info saved to: deployments/${network.name}.json`);
 
   console.log("\n──────────────── Next steps ────────────────");
   console.log(`1. Export ABI to backend:`);

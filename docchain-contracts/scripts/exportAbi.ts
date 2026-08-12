@@ -9,7 +9,8 @@ import * as path from "path";
  * Destino: ../docchain-api/src/blockchain/abi/DocumentRegistry.json
  */
 
-const DEPLOYMENT_PATH = path.join(__dirname, "..", "artifacts", "deployment.json");
+const NETWORK = process.env.DEPLOYMENT_NETWORK || "sepolia";
+const DEPLOYMENT_PATH = path.join(__dirname, "..", "deployments", `${NETWORK}.json`);
 const BACKEND_ABI_DIR = path.join(
   __dirname,
   "..",
@@ -51,7 +52,7 @@ function main() {
   fs.writeFileSync(BACKEND_ABI_FILE, JSON.stringify(payload, null, 2));
 
   console.log("✅ ABI exported to backend");
-  console.log(`   Source:      artifacts/deployment.json`);
+  console.log(`   Source:      deployments/${NETWORK}.json`);
   console.log(`   Destination: ${path.relative(process.cwd(), BACKEND_ABI_FILE)}`);
   console.log(`   Address:     ${deployment.address}`);
   console.log(`   Network:     ${deployment.network} (chainId ${deployment.chainId})`);
