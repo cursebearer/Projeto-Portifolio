@@ -46,26 +46,32 @@ cd docchain-web && npm run dev   # Next.js sobe sem erro
 
 **Objetivo:** Contrato `DocumentRegistry` deployed na Sepolia, testado, com ABI exportada.
 
+Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contratos exigem 100% de branches.
+
 ### 1.1 Escrever o contrato
-- [ ] `contracts/DocumentRegistry.sol`
+- [x] `contracts/DocumentRegistry.sol`
   - Struct `DocumentRecord`
   - Mapping `bytes32 → DocumentRecord`
   - Evento `DocumentRegistered`
   - Função `registerDocument(bytes32 hash, string calldata storageRef)`
   - Função `verifyDocument(bytes32 hash) view`
-  - Modifier: apenas uma vez por hash (evitar sobrescrita)
+  - Erros customizados: `InvalidHash`, `DocumentAlreadyRegistered`, `EmptyStorageRef` (imutabilidade garantida)
 
 ### 1.2 Testes do contrato
-- [ ] `test/DocumentRegistry.test.ts`
+- [x] `test/DocumentRegistry.test.ts` — 13 testes passando
   - Deve registrar documento com sucesso
   - Deve emitir evento `DocumentRegistered`
   - Deve reverter ao tentar registrar hash duplicado
   - Deve retornar dados corretos em `verifyDocument`
   - Deve retornar `exists: false` para hash inexistente
+  - Deploy: owner + totalDocuments zero
+  - isRegistered antes/depois
+  - Registro por conta distinta do owner
 
 ### 1.3 Script de deploy
 - [ ] `scripts/deploy.ts` — faz deploy e salva endereço + ABI em `artifacts/`
-- [ ] `scripts/verify.ts` — verifica contrato no Etherscan Sepolia (opcional mas recomendado para TCC)
+- [ ] `scripts/exportAbi.ts` — copia ABI para `../docchain-api/src/blockchain/abi/`
+- [ ] `npx hardhat verify --network sepolia <ADDR>` — verificação Etherscan
 
 ### 1.4 Exportar para o backend
 - [ ] Copiar ABI gerada para `docchain-api/src/blockchain/abi/DocumentRegistry.json`

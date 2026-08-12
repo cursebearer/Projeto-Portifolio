@@ -32,6 +32,7 @@ planning/
 ├── SMART_CONTRACT.md          ← especificação e scaffold do contrato Solidity
 ├── API_SPEC.md                ← todos os endpoints NestJS documentados
 ├── FRONTEND_SPEC.md           ← páginas, componentes e fluxos Next.js
+├── TESTING_STRATEGY.md        ← metas de cobertura (75% back / 25% front / 100% contracts)
 └── CLAUDE_CODE_GUIDE.md       ← guia de uso com Claude Code (ordem de implementação)
 ```
 
