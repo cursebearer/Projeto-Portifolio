@@ -69,13 +69,23 @@ Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contrat
   - Registro por conta distinta do owner
 
 ### 1.3 Script de deploy
-- [ ] `scripts/deploy.ts` — faz deploy e salva endereço + ABI em `artifacts/`
-- [ ] `scripts/exportAbi.ts` — copia ABI para `../docchain-api/src/blockchain/abi/`
-- [ ] `npx hardhat verify --network sepolia <ADDR>` — verificação Etherscan
+- [x] `scripts/deploy.ts` — faz deploy e salva metadata em `deployments/<network>.json`
+- [x] `scripts/exportAbi.ts` — copia ABI para `../docchain-api/src/blockchain/abi/`
+- [x] `npx hardhat verify --network sepolia <ADDR>` — verificação Etherscan
 
 ### 1.4 Exportar para o backend
-- [ ] Copiar ABI gerada para `docchain-api/src/blockchain/abi/DocumentRegistry.json`
-- [ ] Salvar endereço do contrato em variável de ambiente `CONTRACT_ADDRESS`
+- [x] Copiar ABI gerada para `docchain-api/src/blockchain/abi/DocumentRegistry.json`
+- [x] Salvar endereço do contrato em variável de ambiente `CONTRACT_ADDRESS`
+
+### ✅ Fase 1 concluída (2026-08-12)
+
+- **Contrato deployed:** [`0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e`](https://sepolia.etherscan.io/address/0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e#code)
+- **Rede:** Sepolia (chainId 11155111)
+- **Tx hash:** `0x8f4feb4f02ef810dd3762c7d99290c18c662811654ce9eb644f3f17bf3e8a09d`
+- **Testes:** 13 passing, cobertura 100% (statements / branches / funcs / lines)
+- **ABI publicada:** `docchain-api/src/blockchain/abi/DocumentRegistry.json`
+- **Metadata deploy:** `docchain-contracts/deployments/sepolia.json`
+- **Etherscan verify:** ✔ código-fonte publicado no explorer
 
 ### Critério de conclusão da Fase 1
 ```bash

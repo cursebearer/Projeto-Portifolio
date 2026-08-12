@@ -164,7 +164,7 @@ Projeto-Portifolio/
 ## Roadmap
 
 - [x] **Fase 0** — Setup e infraestrutura
-- [ ] **Fase 1** — Smart Contract (DocumentRegistry)
+- [x] **Fase 1** — Smart Contract (DocumentRegistry) — deployed em [`0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e`](https://sepolia.etherscan.io/address/0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e#code) na Sepolia
 - [ ] **Fase 2** — Backend NestJS (Auth, Crypto, Storage, Blockchain, Documents)
 - [ ] **Fase 3** — Frontend Next.js (Login, Dashboard, Upload, Verificacao)
 - [ ] **Fase 4** — Integracao e testes finais
