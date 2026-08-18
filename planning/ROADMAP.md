@@ -99,24 +99,25 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 
 **Objetivo:** API REST completa, funcional, com todos os fluxos testados via Postman/Insomnia.
 
-### 2.1 Configuração base (dia 1)
-- [ ] ConfigModule com validação de env vars (joi ou zod)
-- [ ] PrismaModule global com PrismaService
-- [ ] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
-- [ ] Multer configurado para upload em memória (memoryStorage)
-- [ ] Pasta `/uploads` mapeada como volume
-- [ ] `cookie-parser` middleware registrado
+### 2.1 Configuração base (dia 1) ✅
+- [x] ConfigModule com validação de env vars (joi)
+- [x] PrismaModule global com PrismaService
+- [x] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
+- [ ] Multer configurado para upload em memória (memoryStorage) — Sessão 4
+- [ ] Pasta `/uploads` mapeada como volume — Sessão 2
+- [x] `cookie-parser` middleware registrado
+- [x] `ValidationPipe` global (whitelist + forbidNonWhitelisted + transform)
 
-### 2.2 AuthModule (dia 1-2)
-- [ ] `POST /auth/register` — cria usuário com senha hasheada (bcrypt)
-- [ ] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=900`); **não retorna token no body**
-- [ ] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
-- [ ] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
-- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável)
-- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação)
-- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade)
-- [ ] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
-- [ ] Decorador `@CurrentUser()` para extrair usuário do token
+### 2.2 AuthModule (dia 1-2) — parcial
+- [x] `POST /auth/register` — cria usuário com senha hasheada (bcrypt 10 rounds)
+- [x] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; SameSite=Lax; Max-Age=900`); **não retorna token no body**
+- [x] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
+- [x] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
+- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável) — pendente
+- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação) — pendente (depende de StorageService)
+- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade) — pendente (depende de DocumentsModule)
+- [x] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
+- [x] Decorador `@CurrentUser()` para extrair usuário do token
 
 ### 2.3 CryptoService (dia 2)
 - [ ] `hashFile(buffer: Buffer): string` — SHA-256 hex
@@ -170,6 +171,14 @@ Via Postman/Insomnia, executar o fluxo completo:
 5. POST /documents/verify (mesmo arquivo) → hashMatch: true, blockchainConfirmed: true
 6. POST /documents/verify (arquivo alterado) → hashMatch: false
 ```
+
+### 🚧 Fase 2 Sessão 1 concluída (2026-08-18)
+
+- **Prisma schema:** 4 models (User, Document, AuditLog, VerificationAttempt) + 4 enums, migration `20260818043522_init` aplicada
+- **PrismaModule:** global, connect/disconnect no lifecycle
+- **AuthModule:** register / login / logout / me — cookie httpOnly + JWT + bcrypt + JwtStrategy (cookie extractor)
+- **10 testes E2E via curl verdes:** 201/409/400/400/200+cookie/401/200/401/204/401
+- **Ajuste técnico:** downgrade Prisma 7.6 → 6.19 (v7 exige adapter novo, incompatível com nossa spec)
 
 ---
 
@@ -265,8 +274,8 @@ Executar o fluxo completo via browser:
 | Fase | Tempo | Status |
 |---|---|---|
 | Fase 0 — Setup | 1 dia | ✅ Concluída |
-| Fase 1 — Smart Contract | 2 dias | ⬜ Não iniciado |
-| Fase 2 — Backend | 5 dias | ⬜ Não iniciado |
+| Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
+| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 1/5) |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |

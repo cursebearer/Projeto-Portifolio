@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -21,9 +23,13 @@ import { AppService } from './app.service';
         UPLOAD_DIR: Joi.string().default('./uploads'),
         MAX_FILE_SIZE_MB: Joi.number().default(50),
         PORT: Joi.number().default(3000),
-        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
       }),
     }),
+    PrismaModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

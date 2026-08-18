@@ -1,13 +1,143 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// DocChain — schema Prisma
+// Ver planning/DATABASE_SCHEMA.md
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ─────────────── ENUMS ───────────────
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  FAILED
+}
+
+enum StorageType {
+  LOCAL
+  IPFS
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  REGISTER
+  UPLOAD
+  DOWNLOAD
+  DELETE
+  VERIFY_PUBLIC
+  VERIFY_PRIVATE
+}
+
+enum VerificationSource {
+  PUBLIC
+  PRIVATE
+}
+
+// ─────────────── users ───────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  documents            Document[]
+  auditLogs            AuditLog[]
+  verificationAttempts VerificationAttempt[]
+
+  @@map("users")
+}
+
+// ─────────────── documents ───────────────
+
+model Document {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+
+  fileName String @map("file_name")
+  mimeType String @map("mime_type")
+  fileSize Int    @map("file_size")
+
+  hash          String @unique
+  hashAlgorithm String @default("SHA-256") @map("hash_algorithm")
+
+  storageType StorageType @default(LOCAL) @map("storage_type")
+  storageRef  String?     @map("storage_ref")
+
+  encryptionIv      String? @map("encryption_iv")
+  encryptionAuthTag String? @map("encryption_auth_tag")
+
+  txHash        String? @map("tx_hash")
+  network       String? @default("sepolia")
+  walletAddress String? @map("wallet_address")
+  blockNumber   Int?    @map("block_number")
+
+  status       DocumentStatus @default(PENDING)
+  errorMessage String?        @map("error_message")
+  uploadedAt   DateTime       @default(now()) @map("uploaded_at")
+  confirmedAt  DateTime?      @map("confirmed_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  deletedAt    DateTime?      @map("deleted_at")
+
+  user                 User                  @relation(fields: [userId], references: [id])
+  verificationAttempts VerificationAttempt[]
+
+  @@index([userId])
+  @@index([hash])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("documents")
+}
+
+// ─────────────── audit_logs ───────────────
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id")
+  action       AuditAction
+  resourceType String?     @map("resource_type")
+  resourceId   String?     @map("resource_id")
+  ipAddress    String?     @map("ip_address")
+  userAgent    String?     @map("user_agent")
+  metadata     Json?
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────── verification_attempts ───────────────
+
+model VerificationAttempt {
+  id         String             @id @default(uuid())
+  hash       String
+  found      Boolean
+  documentId String?            @map("document_id")
+  userId     String?            @map("user_id")
+  source     VerificationSource @default(PUBLIC)
+  ipAddress  String?            @map("ip_address")
+  userAgent  String?            @map("user_agent")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([hash])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("verification_attempts")
 }

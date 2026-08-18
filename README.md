@@ -112,6 +112,43 @@ cd docchain-contracts
 npx hardhat compile
 ```
 
+### Testar endpoints de autenticacao (Fase 2 Sessao 1)
+
+Com o backend rodando (`npm run start:dev` em `docchain-api/`):
+
+```bash
+# 1. Registrar usuario
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seu@email.com","password":"senha1234","name":"Seu Nome"}'
+# Esperado: 201 + { id, email, name, createdAt }
+
+# 2. Login (salva cookie httpOnly em cookies.txt)
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seu@email.com","password":"senha1234"}' \
+  -c cookies.txt -i
+# Esperado: 200 + Set-Cookie: access_token=<jwt>; HttpOnly; SameSite=Lax; Max-Age=900
+
+# 3. Rota protegida (usa o cookie salvo)
+curl http://localhost:3000/auth/me -b cookies.txt
+# Esperado: 200 + { id, email, name, createdAt }
+
+# 4. Logout (limpa cookie)
+curl -X POST http://localhost:3000/auth/logout -b cookies.txt -c cookies.txt -i
+# Esperado: 204 + Set-Cookie: access_token=; Max-Age=0
+
+# 5. Inspecionar banco via GUI
+cd docchain-api
+npx prisma studio
+# Abre http://localhost:5555
+```
+
+**Casos de erro cobertos:**
+- `409` — email ja cadastrado
+- `400` — senha < 8 chars ou email invalido (ValidationPipe)
+- `401` — credenciais invalidas ou cookie ausente/expirado
+
 ## Estrutura do Projeto
 
 ```
@@ -165,7 +202,7 @@ Projeto-Portifolio/
 
 - [x] **Fase 0** — Setup e infraestrutura
 - [x] **Fase 1** — Smart Contract (DocumentRegistry) — deployed em [`0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e`](https://sepolia.etherscan.io/address/0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e#code) na Sepolia
-- [ ] **Fase 2** — Backend NestJS (Auth, Crypto, Storage, Blockchain, Documents)
+- [ ] **Fase 2** — Backend NestJS (Auth, Crypto, Storage, Blockchain, Documents) — 🚧 Sessao 1/5 concluida (Prisma + AuthModule)
 - [ ] **Fase 3** — Frontend Next.js (Login, Dashboard, Upload, Verificacao)
 - [ ] **Fase 4** — Integracao e testes finais
 
