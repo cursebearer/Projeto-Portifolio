@@ -4,7 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { DocumentStatus } from '@prisma/client';
+import { AuditAction, DocumentStatus } from '@prisma/client';
+import { AuditLogService } from '../audit/audit-log.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { CryptoService } from '../crypto/crypto.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,6 +41,7 @@ describe('DocumentsService', () => {
     registerDocument: jest.Mock;
     signerAddress: string;
   };
+  let audit: { log: jest.Mock };
 
   const userId = 'user-1';
   const hash = 'a'.repeat(64);
@@ -113,6 +115,7 @@ describe('DocumentsService', () => {
       }),
       signerAddress: '0xWallet',
     };
+    audit = { log: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -121,6 +124,7 @@ describe('DocumentsService', () => {
         { provide: CryptoService, useValue: crypto },
         { provide: STORAGE_SERVICE, useValue: storage },
         { provide: BlockchainService, useValue: blockchain },
+        { provide: AuditLogService, useValue: audit },
       ],
     }).compile();
 
@@ -181,6 +185,23 @@ describe('DocumentsService', () => {
         }),
       });
       expect(result.status).toBe(DocumentStatus.CONFIRMED);
+    });
+
+    it('registra AuditLog UPLOAD após CONFIRMED', async () => {
+      await service.create(userId, file);
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: AuditAction.UPLOAD,
+        userId,
+        resourceType: 'Document',
+        resourceId: baseDoc.id,
+        metadata: expect.objectContaining({
+          hash,
+          fileName: 'doc.pdf',
+          txHash: '0xabc',
+          blockNumber: 42,
+        }),
+      });
     });
 
     it('persiste iv/authTag em base64', async () => {
@@ -356,7 +377,7 @@ describe('DocumentsService', () => {
   });
 
   describe('remove — soft delete', () => {
-    it('marca deletedAt + apaga arquivo', async () => {
+    it('marca deletedAt + apaga arquivo + AuditLog DELETE', async () => {
       prisma.document.findFirst.mockResolvedValue(baseDoc);
       prisma.document.update.mockResolvedValue({
         ...baseDoc,
@@ -369,6 +390,13 @@ describe('DocumentsService', () => {
       expect(prisma.document.update).toHaveBeenCalledWith({
         where: { id: 'doc-1' },
         data: { deletedAt: expect.any(Date) },
+      });
+      expect(audit.log).toHaveBeenCalledWith({
+        action: AuditAction.DELETE,
+        userId,
+        resourceType: 'Document',
+        resourceId: 'doc-1',
+        metadata: { hash, fileName: 'doc.pdf' },
       });
     });
 
@@ -392,7 +420,7 @@ describe('DocumentsService', () => {
   });
 
   describe('download', () => {
-    it('retrieve → deserialize → decrypt → devolve buffer + metadata', async () => {
+    it('retrieve → deserialize → decrypt → devolve buffer + metadata + AuditLog DOWNLOAD', async () => {
       prisma.document.findFirst.mockResolvedValue({
         ...baseDoc,
         status: DocumentStatus.CONFIRMED,
@@ -406,6 +434,13 @@ describe('DocumentsService', () => {
       expect(result.buffer.toString()).toBe('conteúdo');
       expect(result.fileName).toBe('doc.pdf');
       expect(result.mimeType).toBe('application/pdf');
+      expect(audit.log).toHaveBeenCalledWith({
+        action: AuditAction.DOWNLOAD,
+        userId,
+        resourceType: 'Document',
+        resourceId: 'doc-1',
+        metadata: { hash, fileName: 'doc.pdf' },
+      });
     });
 
     it('rejeita download se status != CONFIRMED', async () => {

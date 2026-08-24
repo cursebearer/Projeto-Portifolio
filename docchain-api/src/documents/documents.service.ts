@@ -6,7 +6,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Document, DocumentStatus } from '@prisma/client';
+import { AuditAction, Document, DocumentStatus } from '@prisma/client';
+import { AuditLogService } from '../audit/audit-log.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { CryptoService } from '../crypto/crypto.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,6 +25,7 @@ export class DocumentsService {
     private readonly crypto: CryptoService,
     @Inject(STORAGE_SERVICE) private readonly storage: IStorageService,
     private readonly blockchain: BlockchainService,
+    private readonly audit: AuditLogService,
   ) {}
 
   async create(userId: string, file: Express.Multer.File): Promise<Document> {
@@ -70,7 +72,7 @@ export class DocumentsService {
         storageRef,
       );
 
-      return this.prisma.document.update({
+      const confirmed = await this.prisma.document.update({
         where: { id: document.id },
         data: {
           status: DocumentStatus.CONFIRMED,
@@ -80,6 +82,21 @@ export class DocumentsService {
           confirmedAt: new Date(),
         },
       });
+
+      await this.audit.log({
+        action: AuditAction.UPLOAD,
+        userId,
+        resourceType: 'Document',
+        resourceId: confirmed.id,
+        metadata: {
+          hash,
+          fileName: file.originalname,
+          txHash,
+          blockNumber,
+        },
+      });
+
+      return confirmed;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'erro desconhecido';
       try {
@@ -156,6 +173,14 @@ export class DocumentsService {
       where: { id: doc.id },
       data: { deletedAt: new Date() },
     });
+
+    await this.audit.log({
+      action: AuditAction.DELETE,
+      userId,
+      resourceType: 'Document',
+      resourceId: doc.id,
+      metadata: { hash: doc.hash, fileName: doc.fileName },
+    });
   }
 
   async download(
@@ -171,6 +196,15 @@ export class DocumentsService {
     const serialized = await this.storage.retrieve(doc.hash);
     const payload = this.crypto.deserializePayload(serialized);
     const buffer = this.crypto.decrypt(payload);
+
+    await this.audit.log({
+      action: AuditAction.DOWNLOAD,
+      userId,
+      resourceType: 'Document',
+      resourceId: doc.id,
+      metadata: { hash: doc.hash, fileName: doc.fileName },
+    });
+
     return { buffer, fileName: doc.fileName, mimeType: doc.mimeType };
   }
 }

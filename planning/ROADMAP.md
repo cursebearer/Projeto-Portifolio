@@ -156,18 +156,16 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Rollback: falha em storage/blockchain marca FAILED + apaga file + rethrow
 - [ ] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
 
-**2.6b — Verify + Audit (Sessão 4b, próxima)**
-- [ ] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
-- [ ] `GET /verify/public/:hash` — pública + regex `^[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
-- [ ] `AuditLogService.log(action, userId?, ...)`
-- [ ] `VerificationAttemptService.record(hash, found, source, ...)`
-- [ ] `RequestContextInterceptor` global (ipAddress + userAgent)
-- [ ] Retro-instrumentar endpoints da 4a com AuditLog
+**2.6b — Verify + Audit (Sessão 4b) ✅**
+- [x] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
+- [x] `GET /verify/public/:hash` — pública + regex `^(0x)?[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
+- [x] `AuditLogService.log(action, userId?, ...)` — não bloqueia fluxo (warn no fail)
+- [x] `VerificationAttemptService.record(hash, found, source, ...)` — idem
+- [x] `RequestContextInterceptor` global via `AsyncLocalStorage` (sem dep externa) — captura ip + userAgent + userId
+- [x] Retro-instrumentar endpoints da 4a com AuditLog UPLOAD/DELETE/DOWNLOAD
+- [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 7** (instrumentar AuthController)
 
-### 2.6b AuditLog + VerificationAttempt (dia 4)
-- [ ] `AuditLogService` — método `log(action, userId?, ...)`
-- [ ] `VerificationAttemptService` — método `record(hash, found, source, ...)`
-- [ ] `RequestContextInterceptor` global — captura ipAddress + userAgent
+### 2.6b AuditLog + VerificationAttempt (dia 4) ✅ (feito na Sessão 4b)
 
 ### 2.7 Polish e documentação (dia 5)
 - [ ] Swagger configurado (`@nestjs/swagger`)
@@ -254,6 +252,27 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **Ajustes técnicos:**
   - `import type` obrigatório em `AuthenticatedUser` e `IStorageService` (isolatedModules + emitDecoratorMetadata)
   - `ParseUUIDPipe` no `:id` bloqueia UUID inválido antes do service
+
+### 🚧 Fase 2 Sessão 4b concluída (2026-08-24)
+
+- **CommonModule (global):** `RequestContextService` (AsyncLocalStorage built-in) + `RequestContextInterceptor` registrado via `APP_INTERCEPTOR` — captura ip + userAgent + userId em todo request
+  - Zero dependência externa (sem `nestjs-cls` etc.)
+  - `runObservable()` propaga contexto pra cadeia RxJS
+- **AuditModule (global):** `AuditLogService.log({ action, userId?, resourceType?, resourceId?, metadata? })`
+  - Lê ip/userAgent/userId do contexto; explícito sobrescreve (`null` explícito = ação anônima)
+  - `try/catch` interno — falha ao gravar log não derruba operação principal (warn log)
+- **VerificationModule:** `VerificationAttemptService.record()` mesma pattern do audit
+- **VerifyController:**
+  - `POST /documents/verify` (JWT) → PRIVATE attempt com userId
+  - `GET /verify/public/:hash` (sem auth) → PUBLIC attempt com userId=null
+  - Validação regex `^(0x)?[a-fA-F0-9]{64}$` via DTO antes de chegar ao service
+- **DocumentsService retro-instrumentado:** UPLOAD (pós-CONFIRMED), DELETE (pós-soft-delete), DOWNLOAD (pós-decrypt) — metadata `{ hash, fileName, txHash?, blockNumber? }`
+- **Testes:** 19 novos (5 request-ctx + 2 interceptor + 4 audit + 4 verification-attempt + 3 verify.ctrl + 3 updates DocumentsService) — suite total **127 verdes** (17 suites)
+- **Coverage global:** 81.89% stmts / 79.53% branch / 93.33% funcs / 84.13% lines
+- **Ajustes técnicos:**
+  - `opts.userId !== undefined` (não `??`) pra permitir `null` explícito
+  - `VerifyController` sem prefix (`@Controller()`) porque endpoints ficam em paths diferentes (`documents/verify` e `verify/public/:hash`)
+- **Débito Sessão 7:** AuditLog para LOGIN/LOGOUT/REGISTER (instrumentar AuthController)
 
 ---
 
@@ -350,7 +369,7 @@ Executar o fluxo completo via browser:
 |---|---|---|
 | Fase 0 — Setup | 1 dia | ✅ Concluída |
 | Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
-| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 4a/5) |
+| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 4b/5) |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |

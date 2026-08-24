@@ -3,12 +3,15 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
+import { CommonModule } from './common/common.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { DocumentsModule } from './documents/documents.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -33,11 +36,14 @@ import { StorageModule } from './storage/storage.module';
       }),
     }),
     PrismaModule,
+    CommonModule,
     CryptoModule,
     StorageModule,
     BlockchainModule,
+    AuditModule,
     AuthModule,
     DocumentsModule,
+    VerificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
