@@ -133,13 +133,16 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Validação regex hash SHA-256 (bloqueia path traversal)
 - [x] Testes do StorageService — 13 testes, 100% statements
 
-### 2.5 BlockchainModule (dia 3)
-- [ ] `BlockchainService` com Ethers.js
-- [ ] Conecta ao contrato via ABI + endereço + RPC Sepolia
-- [ ] `registerDocument(hash, storageRef)` — chama contrato + aguarda confirmação
-- [ ] `verifyDocument(hash)` — lê contrato (view function, sem tx)
-- [ ] Tratamento de erros: timeout, gas insuficiente, hash duplicado
-- [ ] Testes de integração com contrato (pode usar fork local do Hardhat)
+### 2.5 BlockchainModule (dia 3) ✅
+- [x] `BlockchainService` com Ethers.js v6
+- [x] Conecta ao contrato via ABI + endereço + RPC Sepolia (Provider/Signer/Contract in-service)
+- [x] `registerDocument(hash, storageRef)` — chama contrato + aguarda `tx.wait()` (1 confirmação)
+- [x] `verifyDocument(hash)` — lê contrato (view function, sem tx)
+- [x] `isRegistered(hash)` (bônus — pre-check antes de tx)
+- [x] Error mapping: `DocumentAlreadyRegistered → Conflict`, `InvalidHash/EmptyStorageRef → BadRequest`, genérico → `InternalServerError` com Logger
+- [x] Conversão hex → bytes32 + validação regex `^[a-fA-F0-9]{64}$`
+- [x] 17 testes unit (ethers mockado) — 97.87% stmts / 87.5% branch
+- [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 7
 
 ### 2.6 DocumentsModule (dia 3-4)
 - [ ] `POST /documents` — fluxo completo de upload + AuditLog UPLOAD
@@ -166,6 +169,11 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [ ] Ativar `coverageThreshold` no `jest.config` (75% stmts/branches/lines/funcs)
 - [ ] Adicionar `coveragePathIgnorePatterns` para `*.module.ts`, `main.ts`, `storage.interface.ts` (types-only)
 - [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED (depende BlockchainModule + DocumentsModule)
+- [ ] **BlockchainService — pendências RFC:**
+  - Timeout explícito em `tx.wait()` (RNF02 cap 30s Sepolia)
+  - Balance check do signer antes de tx (defensivo "gas insuficiente")
+  - Event parser opcional de `DocumentRegistered` (evita 2ª call de leitura pós-tx)
+  - Teste de integração real contra Sepolia OU Hardhat fork
 
 ### Critério de conclusão da Fase 2
 ```
@@ -199,6 +207,20 @@ Via Postman/Insomnia, executar o fluxo completo:
   - `bcrypt` mockado via `jest.mock` (não `spyOn`: bcrypt.compare é readonly export)
   - `cookieExtractor` e `extractCurrentUser` extraídos como exports pra permitir teste unitário
 - **Débito remanescente (Sessão 7):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
+
+### 🚧 Fase 2 Sessão 3 concluída (2026-08-24)
+
+- **BlockchainModule (global):** `BlockchainService` com ethers.js v6
+- **Endpoints do contrato usados:** `registerDocument` / `verifyDocument` / `isRegistered` (os 3 do ABI que a API precisa)
+- **Endpoints não usados (proposital):** `owner()`, `totalDocuments()` — governança e métrica admin, fora do escopo TCC
+- **Injeção:** Provider/Signer/Contract construídos in-service via `ConfigService` (RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS)
+- **Error mapping:** `DocumentAlreadyRegistered → ConflictException` (RF10), `InvalidHash`/`EmptyStorageRef → BadRequestException`, genérico → `InternalServerErrorException` com `Logger`
+- **Bytes32:** aceita hash com/sem prefix `0x`, normaliza lowercase, valida regex antes de chamar contrato
+- **Testes:** 17 unit verdes com `ethers` mockado — cobertura 97.87% stmts / 87.5% branch / 100% funcs
+- **Suite total:** 81 testes verdes (10 suites) — cobertura global mantém acima de 75%
+- **Ajustes técnicos:**
+  - Mock do módulo `ethers` via `jest.mock` — expõe `__contractInstance` compartilhado
+  - Tests `it.each` cobrem os 3 envs obrigatórios (RPC/PRIVATE_KEY/ADDRESS)
 
 ---
 
@@ -295,7 +317,7 @@ Executar o fluxo completo via browser:
 |---|---|---|
 | Fase 0 — Setup | 1 dia | ✅ Concluída |
 | Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
-| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 2/5) |
+| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 3/5) |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |
