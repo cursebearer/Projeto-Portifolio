@@ -107,6 +107,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [ ] Pasta `/uploads` mapeada como volume — Sessão 2
 - [x] `cookie-parser` middleware registrado
 - [x] `ValidationPipe` global (whitelist + forbidNonWhitelisted + transform)
+- [x] Volume `uploads_data` declarado no `docker-compose.yml` (Sessão 2)
 
 ### 2.2 AuthModule (dia 1-2) — parcial
 - [x] `POST /auth/register` — cria usuário com senha hasheada (bcrypt 10 rounds)
@@ -119,16 +120,18 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
 - [x] Decorador `@CurrentUser()` para extrair usuário do token
 
-### 2.3 CryptoService (dia 2)
-- [ ] `hashFile(buffer: Buffer): string` — SHA-256 hex
-- [ ] `encrypt(buffer: Buffer): EncryptedPayload` — AES-256-GCM
-- [ ] `decrypt(payload: EncryptedPayload): Buffer`
-- [ ] Testes unitários do CryptoService
+### 2.3 CryptoService (dia 2) ✅
+- [x] `hashFile(buffer: Buffer): string` — SHA-256 hex
+- [x] `encrypt(buffer: Buffer): EncryptedPayload` — AES-256-GCM
+- [x] `decrypt(payload: EncryptedPayload): Buffer`
+- [x] `serializePayload` / `deserializePayload` (formato `iv|authTag|ciphertext`)
+- [x] Testes unitários do CryptoService — 17 testes, 100% statements
 
-### 2.4 StorageModule (dia 2)
-- [ ] Interface `IStorageService` (permite trocar Local por IPFS)
-- [ ] `LocalStorageService` — salva/recupera arquivo em `/uploads/{hash}.enc`
-- [ ] Testes do StorageService
+### 2.4 StorageModule (dia 2) ✅
+- [x] Interface `IStorageService` + token DI `STORAGE_SERVICE` (permite trocar Local por IPFS)
+- [x] `LocalStorageService` — save / retrieve / delete / exists em `${UPLOAD_DIR}/{hash}.enc`
+- [x] Validação regex hash SHA-256 (bloqueia path traversal)
+- [x] Testes do StorageService — 13 testes, 100% statements
 
 ### 2.5 BlockchainModule (dia 3)
 - [ ] `BlockchainService` com Ethers.js
@@ -179,6 +182,15 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **AuthModule:** register / login / logout / me — cookie httpOnly + JWT + bcrypt + JwtStrategy (cookie extractor)
 - **10 testes E2E via curl verdes:** 201/409/400/400/200+cookie/401/200/401/204/401
 - **Ajuste técnico:** downgrade Prisma 7.6 → 6.19 (v7 exige adapter novo, incompatível com nossa spec)
+
+### 🚧 Fase 2 Sessão 2 concluída (2026-08-24)
+
+- **CryptoModule:** `CryptoService` global — SHA-256 hex + AES-256-GCM (IV 12B, authTag 16B) + serialize/deserialize (`iv|authTag|ciphertext`)
+- **StorageModule:** interface `IStorageService` + token `STORAGE_SERVICE` (troca Local↔IPFS futura) + `LocalStorageService` (save/retrieve/delete/exists em `${UPLOAD_DIR}/{hash}.enc`)
+- **Segurança:** validação regex `^[a-f0-9]{64}$` no `LocalStorageService` bloqueia path traversal
+- **Volume Docker:** `uploads_data` declarado no `docker-compose.yml`
+- **Testes:** 30 unitários verdes (17 crypto + 13 storage) — cobertura 100% statements nos services alvo
+- **Ajuste técnico:** `serializePayload` retorna Buffer único para gravar em 1 arquivo `.enc`; header fixo 28B
 
 ---
 
@@ -275,7 +287,7 @@ Executar o fluxo completo via browser:
 |---|---|---|
 | Fase 0 — Setup | 1 dia | ✅ Concluída |
 | Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
-| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 1/5) |
+| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 2/5) |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |
