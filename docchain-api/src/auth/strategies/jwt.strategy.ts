@@ -10,7 +10,7 @@ export interface JwtPayload {
   email: string;
 }
 
-const cookieExtractor = (req: Request): string | null => {
+export const cookieExtractor = (req: Request): string | null => {
   const cookies = (req as Request & { cookies?: Record<string, string> })
     .cookies;
   return cookies?.access_token ?? null;

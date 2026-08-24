@@ -163,6 +163,9 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [ ] Rate limiting básico (`@nestjs/throttler`)
 - [ ] Logging estruturado
 - [ ] Variáveis de ambiente todas documentadas no `.env.example`
+- [ ] Ativar `coverageThreshold` no `jest.config` (75% stmts/branches/lines/funcs)
+- [ ] Adicionar `coveragePathIgnorePatterns` para `*.module.ts`, `main.ts`, `storage.interface.ts` (types-only)
+- [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED (depende BlockchainModule + DocumentsModule)
 
 ### Critério de conclusão da Fase 2
 ```
@@ -189,8 +192,13 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **StorageModule:** interface `IStorageService` + token `STORAGE_SERVICE` (troca Local↔IPFS futura) + `LocalStorageService` (save/retrieve/delete/exists em `${UPLOAD_DIR}/{hash}.enc`)
 - **Segurança:** validação regex `^[a-f0-9]{64}$` no `LocalStorageService` bloqueia path traversal
 - **Volume Docker:** `uploads_data` declarado no `docker-compose.yml`
-- **Testes:** 30 unitários verdes (17 crypto + 13 storage) — cobertura 100% statements nos services alvo
-- **Ajuste técnico:** `serializePayload` retorna Buffer único para gravar em 1 arquivo `.enc`; header fixo 28B
+- **Backfill Sessão 1:** `auth.service.spec.ts`, `auth.controller.spec.ts`, `jwt.strategy.spec.ts`, `prisma.service.spec.ts`, `current-user.decorator.spec.ts`, `jwt-auth.guard.spec.ts` — décidido tirar o débito antes da Sessão 3
+- **Testes:** 64 unitários verdes — cobertura global **79.33% stmts / 83% branch / 94.73% funcs / 81.04% lines** (bate meta 75% do TESTING_STRATEGY)
+- **Ajustes técnicos:**
+  - `serializePayload` retorna Buffer único (header fixo 28B)
+  - `bcrypt` mockado via `jest.mock` (não `spyOn`: bcrypt.compare é readonly export)
+  - `cookieExtractor` e `extractCurrentUser` extraídos como exports pra permitir teste unitário
+- **Débito remanescente (Sessão 7):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
 
 ---
 
