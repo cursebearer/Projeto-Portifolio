@@ -103,7 +103,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] ConfigModule com validação de env vars (joi)
 - [x] PrismaModule global com PrismaService
 - [x] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
-- [ ] Multer configurado para upload em memória (memoryStorage) — Sessão 4
+- [x] Multer configurado para upload em memória (memoryStorage) — via `MulterModule.registerAsync` no `DocumentsModule` (Sessão 4a)
 - [ ] Pasta `/uploads` mapeada como volume — Sessão 2
 - [x] `cookie-parser` middleware registrado
 - [x] `ValidationPipe` global (whitelist + forbidNonWhitelisted + transform)
@@ -145,15 +145,24 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 7
 
 ### 2.6 DocumentsModule (dia 3-4)
-- [ ] `POST /documents` — fluxo completo de upload + AuditLog UPLOAD
-- [ ] `GET /documents` — lista documentos do usuário (paginado, `deletedAt IS NULL`)
-- [ ] `GET /documents/:id` — detalhe de um documento
-- [ ] `DELETE /documents/:id` — soft-delete (`deletedAt = now()`) + remove arquivo cifrado + AuditLog DELETE (RF22-24)
+
+**2.6a — Core CRUD (Sessão 4a) ✅**
+- [x] `POST /documents` — fluxo síncrono hash → encrypt → save → register → CONFIRMED
+- [x] `GET /documents` — paginado + filtro status + `deletedAt IS NULL`
+- [x] `GET /documents/:id` — 404 se não é dono (evita vazar existência)
+- [x] `DELETE /documents/:id` — soft-delete + apaga `.enc` (idempotente)
+- [x] `GET /documents/:id/download` — decrypt + headers (só se status CONFIRMED)
+- [x] `ListDocumentsQueryDto` (class-validator + class-transformer)
+- [x] Rollback: falha em storage/blockchain marca FAILED + apaga file + rethrow
+- [ ] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
+
+**2.6b — Verify + Audit (Sessão 4b, próxima)**
 - [ ] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
-- [ ] `GET /verify/public/:hash` — verificação pública + validação regex `^[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
-- [ ] `GET /documents/:id/download` — arquivo descriptografado + AuditLog DOWNLOAD
-- [ ] DTOs com validação (class-validator)
-- [ ] Tratamento de erros com filtros globais
+- [ ] `GET /verify/public/:hash` — pública + regex `^[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
+- [ ] `AuditLogService.log(action, userId?, ...)`
+- [ ] `VerificationAttemptService.record(hash, found, source, ...)`
+- [ ] `RequestContextInterceptor` global (ipAddress + userAgent)
+- [ ] Retro-instrumentar endpoints da 4a com AuditLog
 
 ### 2.6b AuditLog + VerificationAttempt (dia 4)
 - [ ] `AuditLogService` — método `log(action, userId?, ...)`
@@ -221,6 +230,30 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **Ajustes técnicos:**
   - Mock do módulo `ethers` via `jest.mock` — expõe `__contractInstance` compartilhado
   - Tests `it.each` cobrem os 3 envs obrigatórios (RPC/PRIVATE_KEY/ADDRESS)
+
+### 🚧 Fase 2 Sessão 4a concluída (2026-08-24)
+
+- **DocumentsModule:** `DocumentsService` + `DocumentsController` + `ListDocumentsQueryDto`
+- **Multer:** `MulterModule.registerAsync` com `memoryStorage()` + limite `MAX_FILE_SIZE_MB` (default 50)
+- **Fluxo POST /documents (síncrono, RNF02 <30s):**
+  1. `crypto.hashFile(buffer)` → SHA-256
+  2. Pré-check duplicata em Prisma (`Document.hash @unique`) — reject 409 antes de gastar gas
+  3. Cria row `status=PROCESSING`
+  4. `crypto.encrypt` + `serializePayload` → 1 arquivo `.enc` (iv|authTag|ciphertext)
+  5. `storage.save(hash, buffer)` → storageRef
+  6. Grava iv/authTag em base64 no row
+  7. `blockchain.registerDocument(hash, storageRef)` + `tx.wait()`
+  8. Row → `CONFIRMED` com txHash, blockNumber, walletAddress, confirmedAt
+  9. Falha em qualquer step: rollback (delete file idempotente) + `status=FAILED` + errorMessage + rethrow
+- **Ownership:** `findFirst({ id, userId, deletedAt: null })` — 404 unificado (não vaza existência)
+- **Soft-delete:** RF22-24 — `deletedAt = now()` + apaga arquivo, on-chain permanece imutável
+- **Download:** só se `status=CONFIRMED` — retrieve → deserialize → decrypt → send com `Content-Disposition` encoded
+- **BlockchainService:** exposto `signerAddress` (via `Wallet.address`) — grava em `Document.walletAddress`
+- **Testes:** 27 novos (17 service + 10 controller) — coverage `documents.service.ts` 100% stmts / 78.94% branch
+- **Suite total:** 108 testes verdes (12 suites) — global 82.61% stmts / 76.92% branch / 91.66% funcs / 84.65% lines
+- **Ajustes técnicos:**
+  - `import type` obrigatório em `AuthenticatedUser` e `IStorageService` (isolatedModules + emitDecoratorMetadata)
+  - `ParseUUIDPipe` no `:id` bloqueia UUID inválido antes do service
 
 ---
 
@@ -317,7 +350,7 @@ Executar o fluxo completo via browser:
 |---|---|---|
 | Fase 0 — Setup | 1 dia | ✅ Concluída |
 | Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
-| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 3/5) |
+| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 4a/5) |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |

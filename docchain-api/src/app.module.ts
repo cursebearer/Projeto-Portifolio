@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { CryptoModule } from './crypto/crypto.module';
+import { DocumentsModule } from './documents/documents.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
 
@@ -36,6 +37,7 @@ import { StorageModule } from './storage/storage.module';
     StorageModule,
     BlockchainModule,
     AuthModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

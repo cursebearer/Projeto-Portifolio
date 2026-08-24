@@ -16,7 +16,10 @@ jest.mock('ethers', () => {
   };
   return {
     JsonRpcProvider: jest.fn().mockImplementation(() => ({ __provider: true })),
-    Wallet: jest.fn().mockImplementation(() => ({ __signer: true })),
+    Wallet: jest.fn().mockImplementation(() => ({
+      __signer: true,
+      address: '0xDeadBeef00000000000000000000000000000000',
+    })),
     Contract: jest.fn().mockImplementation(() => contractInstance),
     __contractInstance: contractInstance,
   };
@@ -247,6 +250,14 @@ describe('BlockchainService', () => {
     it('rejeita hash inválido', async () => {
       await expect(service.verifyDocument('bad')).rejects.toBeInstanceOf(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('signerAddress', () => {
+    it('expõe endereço do signer', () => {
+      expect(service.signerAddress).toBe(
+        '0xDeadBeef00000000000000000000000000000000',
       );
     });
   });

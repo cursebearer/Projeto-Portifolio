@@ -28,6 +28,7 @@ const HASH_REGEX = /^[a-fA-F0-9]{64}$/;
 export class BlockchainService {
   private readonly logger = new Logger(BlockchainService.name);
   private readonly contract: Contract;
+  private readonly _signerAddress: string;
 
   constructor(config: ConfigService) {
     const rpcUrl = config.get<string>('RPC_URL');
@@ -39,11 +40,16 @@ export class BlockchainService {
 
     const provider = new JsonRpcProvider(rpcUrl);
     const signer = new Wallet(privateKey, provider);
+    this._signerAddress = signer.address;
     this.contract = new Contract(
       address,
       DocumentRegistryArtifact.abi,
       signer,
     );
+  }
+
+  get signerAddress(): string {
+    return this._signerAddress;
   }
 
   async registerDocument(
