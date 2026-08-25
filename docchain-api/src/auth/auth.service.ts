@@ -5,7 +5,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { AuditAction } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -31,6 +33,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly audit: AuditLogService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthenticatedUser> {
@@ -50,6 +53,13 @@ export class AuthService {
       },
     });
 
+    await this.audit.log({
+      action: AuditAction.REGISTER,
+      userId: user.id,
+      resourceType: 'User',
+      resourceId: user.id,
+    });
+
     return this.toAuthenticatedUser(user);
   }
 
@@ -58,6 +68,11 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (!user) {
+      await this.audit.log({
+        action: AuditAction.LOGIN,
+        userId: null,
+        metadata: { success: false, email: dto.email, reason: 'user_not_found' },
+      });
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -66,6 +81,11 @@ export class AuthService {
       user.passwordHash,
     );
     if (!passwordMatches) {
+      await this.audit.log({
+        action: AuditAction.LOGIN,
+        userId: user.id,
+        metadata: { success: false, reason: 'wrong_password' },
+      });
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -74,6 +94,12 @@ export class AuthService {
       { sub: user.id, email: user.email },
       { expiresIn } as unknown as import('@nestjs/jwt').JwtSignOptions,
     );
+
+    await this.audit.log({
+      action: AuditAction.LOGIN,
+      userId: user.id,
+      metadata: { success: true },
+    });
 
     return {
       accessToken,

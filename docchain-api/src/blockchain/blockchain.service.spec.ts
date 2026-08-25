@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  RequestTimeoutException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -14,14 +15,20 @@ jest.mock('ethers', () => {
     verifyDocument: jest.fn(),
     isRegistered: jest.fn(),
   };
+  const providerInstance = {
+    __provider: true,
+    getBalance: jest.fn().mockResolvedValue(10n ** 18n),
+    getBlockNumber: jest.fn().mockResolvedValue(9_999_999),
+  };
   return {
-    JsonRpcProvider: jest.fn().mockImplementation(() => ({ __provider: true })),
+    JsonRpcProvider: jest.fn().mockImplementation(() => providerInstance),
     Wallet: jest.fn().mockImplementation(() => ({
       __signer: true,
       address: '0xDeadBeef00000000000000000000000000000000',
     })),
     Contract: jest.fn().mockImplementation(() => contractInstance),
     __contractInstance: contractInstance,
+    __providerInstance: providerInstance,
   };
 });
 
@@ -30,6 +37,13 @@ const contractMock = (jest.requireMock('ethers') as { __contractInstance: {
   verifyDocument: jest.Mock;
   isRegistered: jest.Mock;
 } }).__contractInstance;
+
+const providerMock = (jest.requireMock('ethers') as {
+  __providerInstance: {
+    getBalance: jest.Mock;
+    getBlockNumber: jest.Mock;
+  };
+}).__providerInstance;
 
 const validHash =
   'a'.repeat(64);
@@ -46,6 +60,8 @@ describe('BlockchainService', () => {
     contractMock.registerDocument.mockReset();
     contractMock.verifyDocument.mockReset();
     contractMock.isRegistered.mockReset();
+    providerMock.getBalance.mockClear().mockResolvedValue(10n ** 18n);
+    providerMock.getBlockNumber.mockClear().mockResolvedValue(9_999_999);
 
     config = {
       get: jest.fn((key: string) => {
@@ -278,6 +294,70 @@ describe('BlockchainService', () => {
       await expect(service.isRegistered('bad')).rejects.toBeInstanceOf(
         BadRequestException,
       );
+    });
+  });
+
+  describe('getBlockNumber (health)', () => {
+    it('delega ao provider e retorna number', async () => {
+      providerMock.getBlockNumber.mockResolvedValueOnce(42);
+      await expect(service.getBlockNumber()).resolves.toBe(42);
+    });
+
+    it('propaga erro do provider', async () => {
+      providerMock.getBlockNumber.mockRejectedValueOnce(new Error('rpc down'));
+      await expect(service.getBlockNumber()).rejects.toThrow('rpc down');
+    });
+  });
+
+  describe('balance check (pré-tx)', () => {
+    it('warn quando saldo abaixo do mínimo mas não falha registro', async () => {
+      providerMock.getBalance.mockResolvedValueOnce(1n); // muito baixo
+      const waitMock = jest.fn().mockResolvedValue({
+        hash: '0xtx',
+        blockNumber: 1,
+      });
+      contractMock.registerDocument.mockResolvedValue({ wait: waitMock });
+
+      const res = await service.registerDocument(validHash, 'ref');
+      expect(res.txHash).toBe('0xtx');
+    });
+
+    it('não quebra se getBalance falhar', async () => {
+      providerMock.getBalance.mockRejectedValueOnce(new Error('rpc glitch'));
+      const waitMock = jest.fn().mockResolvedValue({
+        hash: '0xtx',
+        blockNumber: 1,
+      });
+      contractMock.registerDocument.mockResolvedValue({ wait: waitMock });
+
+      await expect(
+        service.registerDocument(validHash, 'ref'),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe('tx.wait timeout', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('mapeia timeout de tx.wait para RequestTimeoutException', async () => {
+      const neverResolves = new Promise(() => {});
+      const waitMock = jest.fn().mockReturnValue(neverResolves);
+      contractMock.registerDocument.mockResolvedValue({ wait: waitMock });
+
+      const promise = service.registerDocument(validHash, 'ref');
+      // Anexa handler pra evitar unhandled rejection antes de avançar timers
+      const caught = promise.catch((err) => err);
+      await Promise.resolve();
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(30_001);
+
+      const err = await caught;
+      expect(err).toBeInstanceOf(RequestTimeoutException);
     });
   });
 });

@@ -8,6 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { VerificationSource } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -16,6 +18,7 @@ import { BlockchainService, VerifyResult } from '../blockchain/blockchain.servic
 import { VerifyHashDto } from './dto/verify-hash.dto';
 import { VerificationAttemptService } from './verification-attempt.service';
 
+@ApiTags('verification')
 @Controller()
 export class VerifyController {
   constructor(
@@ -25,6 +28,7 @@ export class VerifyController {
 
   @Post('documents/verify')
   @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
   @UseGuards(JwtAuthGuard)
   async verifyPrivate(
     @CurrentUser() user: AuthenticatedUser,
@@ -41,6 +45,7 @@ export class VerifyController {
   }
 
   @Get('verify/public/:hash')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async verifyPublic(@Param() params: VerifyHashDto): Promise<VerifyResult> {
     const result = await this.blockchain.verifyDocument(params.hash);
     await this.attempts.record({

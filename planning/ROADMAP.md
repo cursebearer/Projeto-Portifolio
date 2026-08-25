@@ -142,7 +142,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Error mapping: `DocumentAlreadyRegistered → Conflict`, `InvalidHash/EmptyStorageRef → BadRequest`, genérico → `InternalServerError` com Logger
 - [x] Conversão hex → bytes32 + validação regex `^[a-fA-F0-9]{64}$`
 - [x] 17 testes unit (ethers mockado) — 97.87% stmts / 87.5% branch
-- [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 7
+- [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 5
 
 ### 2.6 DocumentsModule (dia 3-4)
 
@@ -163,24 +163,24 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] `VerificationAttemptService.record(hash, found, source, ...)` — idem
 - [x] `RequestContextInterceptor` global via `AsyncLocalStorage` (sem dep externa) — captura ip + userAgent + userId
 - [x] Retro-instrumentar endpoints da 4a com AuditLog UPLOAD/DELETE/DOWNLOAD
-- [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 7** (instrumentar AuthController)
+- [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 5** (instrumentar AuthController)
 
 ### 2.6b AuditLog + VerificationAttempt (dia 4) ✅ (feito na Sessão 4b)
 
-### 2.7 Polish e documentação (dia 5)
-- [ ] Swagger configurado (`@nestjs/swagger`)
-- [ ] Health check endpoint `GET /health`
-- [ ] Rate limiting básico (`@nestjs/throttler`)
-- [ ] Logging estruturado
-- [ ] Variáveis de ambiente todas documentadas no `.env.example`
-- [ ] Ativar `coverageThreshold` no `jest.config` (75% stmts/branches/lines/funcs)
-- [ ] Adicionar `coveragePathIgnorePatterns` para `*.module.ts`, `main.ts`, `storage.interface.ts` (types-only)
-- [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED (depende BlockchainModule + DocumentsModule)
-- [ ] **BlockchainService — pendências RFC:**
-  - Timeout explícito em `tx.wait()` (RNF02 cap 30s Sepolia)
-  - Balance check do signer antes de tx (defensivo "gas insuficiente")
-  - Event parser opcional de `DocumentRegistered` (evita 2ª call de leitura pós-tx)
-  - Teste de integração real contra Sepolia OU Hardhat fork
+### 2.7 Polish e documentação (dia 5) ✅
+- [x] Swagger configurado (`@nestjs/swagger`) em `/api/docs` — cookie auth `access_token`
+- [x] Health check endpoint `GET /health` (DB via `SELECT 1` + blockchain via `getBlockNumber` com timeout 5s)
+- [x] Rate limiting global (`@nestjs/throttler`) — 100 req/min padrão, mais restrito em `/auth/login` (10/min), `/auth/register` (5/min), `/verify/public/:hash` (30/min), `/health` skip
+- [x] Logging estruturado — níveis via `LOG_LEVEL` env (verbose|debug|log|warn|error|fatal)
+- [x] Variáveis de ambiente todas documentadas no `.env.example` (+ LOG_LEVEL, THROTTLE_*)
+- [x] Ativar `coverageThreshold` no `jest.config.ts` (75% stmts/branches/lines/funcs)
+- [x] `coveragePathIgnorePatterns` para `*.module.ts`, `main.ts`, `storage.interface.ts`, `dto/`, `decorators/`, `guards/`, `strategies/`, `blockchain/abi/`
+- [x] **BlockchainService — pendências RFC:**
+  - [x] Timeout explícito em `tx.wait()` (RNF02 cap 30s Sepolia) → `RequestTimeoutException`
+  - [x] Balance check do signer antes de tx (warn se < 0.001 ETH)
+  - [ ] Event parser opcional de `DocumentRegistered` — decidido não implementar (2ª call `verifyDocument` já cobre e é mais explícita)
+  - [ ] Teste de integração real contra Sepolia OU Hardhat fork — **deferido pra Fase 4** (integração)
+- [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED — **deferido pra Fase 4** (precisa Sepolia real ou Hardhat fork rodando)
 
 ### Critério de conclusão da Fase 2
 ```
@@ -213,7 +213,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - `serializePayload` retorna Buffer único (header fixo 28B)
   - `bcrypt` mockado via `jest.mock` (não `spyOn`: bcrypt.compare é readonly export)
   - `cookieExtractor` e `extractCurrentUser` extraídos como exports pra permitir teste unitário
-- **Débito remanescente (Sessão 7):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
+- **Débito remanescente (Sessão 5):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
 
 ### 🚧 Fase 2 Sessão 3 concluída (2026-08-24)
 
@@ -272,7 +272,28 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **Ajustes técnicos:**
   - `opts.userId !== undefined` (não `??`) pra permitir `null` explícito
   - `VerifyController` sem prefix (`@Controller()`) porque endpoints ficam em paths diferentes (`documents/verify` e `verify/public/:hash`)
-- **Débito Sessão 7:** AuditLog para LOGIN/LOGOUT/REGISTER (instrumentar AuthController)
+- **Débito Sessão 5:** AuditLog para LOGIN/LOGOUT/REGISTER (instrumentar AuthController)
+
+### 🎯 Fase 2 Sessão 5 concluída (2026-08-25)
+
+- **Swagger:** `SwaggerModule` em `/api/docs` — cookie auth `access_token`, tags `auth`/`documents`/`verification`/`health`, decorators `@ApiProperty` nos DTOs, `@ApiConsumes('multipart/form-data')` no upload
+- **HealthModule:** `HealthController` + `HealthService` — checa Prisma (`$queryRaw`SELECT 1``) + `BlockchainService.getBlockNumber()` (timeout 5s), retorna `200 ok` ou `503 degraded` com detail por check, `@SkipThrottle()`
+- **Throttler global:** `APP_GUARD` = `ThrottlerGuard`; TTL/limit via env (`THROTTLE_TTL_SECONDS`, `THROTTLE_LIMIT`); overrides `@Throttle` em endpoints sensíveis
+- **BlockchainService hardening:**
+  - `TX_WAIT_TIMEOUT_MS = 30_000` (RNF02) + método `withTimeout()` genérico → `RequestTimeoutException`
+  - `assertSufficientBalance()` pré-tx — warn se saldo < 0.001 ETH (não bloqueia, RPC pode falhar)
+  - `getBlockNumber()` público pro health check (com mesmo timeout wrapper)
+- **AuditLog auth:** `AuthService.register/login` grava REGISTER/LOGIN success/failure com metadata (`success`, `reason`); `AuthController.logout` grava LOGOUT
+- **Logging estruturado:** `LOG_LEVEL` env aplicado via `resolveLogLevels()` em `bootstrap` (`main.ts`)
+- **Jest config extraído** de `package.json` → `jest.config.ts`; `coverageThreshold` 75% ativo; `coveragePathIgnorePatterns` exclui módulos, DTOs, decorators, guards, strategies, ABIs
+- **`.env.example`:** adicionados `LOG_LEVEL`, `THROTTLE_TTL_SECONDS`, `THROTTLE_LIMIT`; Joi validation atualizada
+- **Testes:** 14 novos (4 health.service + 1 health.ctrl + 4 auth.service audit + 1 auth.ctrl logout + 2 blockchain balance + 1 blockchain getBlockNumber + 1 blockchain timeout) — suite total **141 verdes** (19 suites)
+- **Coverage global (com ignorePatterns):** **99.53% stmts / 80.07% branch / 100% funcs / 99.74% lines** — bate threshold 75%
+- **Ajustes técnicos:**
+  - Fake timers + `advanceTimersByTimeAsync` + handler `.catch` antecipado pra testar timeout tx.wait sem `PromiseRejectionHandledWarning`
+  - `AuditLogService` já era global — só injetar em `AuthService`/`AuthController`
+  - `SkipThrottle` no health evita 429 durante monitoring
+- **Deferido Fase 4:** E2E completo POST /documents → CONFIRMED (precisa Sepolia/Hardhat fork), event parser DocumentRegistered (2ª call verifyDocument já cobre)
 
 ---
 

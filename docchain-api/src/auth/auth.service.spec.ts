@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
 
@@ -24,6 +25,7 @@ describe('AuthService', () => {
   };
   let jwt: { signAsync: jest.Mock };
   let config: { get: jest.Mock };
+  let audit: { log: jest.Mock };
 
   const bcryptHash = bcrypt.hash as jest.Mock;
   const bcryptCompare = bcrypt.compare as jest.Mock;
@@ -45,6 +47,7 @@ describe('AuthService', () => {
     };
     jwt = { signAsync: jest.fn() };
     config = { get: jest.fn() };
+    audit = { log: jest.fn().mockResolvedValue(undefined) };
 
     bcryptHash.mockReset();
     bcryptCompare.mockReset();
@@ -55,6 +58,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwt },
         { provide: ConfigService, useValue: config },
+        { provide: AuditLogService, useValue: audit },
       ],
     }).compile();
 
@@ -117,6 +121,25 @@ describe('AuthService', () => {
 
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
+
+    it('grava REGISTER no audit log após sucesso', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue(userRow);
+      bcryptHash.mockResolvedValue('h');
+
+      await service.register({
+        email: 'rafa@example.com',
+        password: 'abcdefgh',
+        name: 'Rafa',
+      });
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: 'REGISTER',
+        userId: userRow.id,
+        resourceType: 'User',
+        resourceId: userRow.id,
+      });
+    });
   });
 
   describe('login', () => {
@@ -165,6 +188,54 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'rafa@example.com', password: 'errada12' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('audit registra LOGIN success com userId', async () => {
+      prisma.user.findUnique.mockResolvedValue(userRow);
+      bcryptCompare.mockResolvedValue(true);
+      config.get.mockReturnValue('15m');
+      jwt.signAsync.mockResolvedValue('t');
+
+      await service.login({ email: 'rafa@example.com', password: 'ok12ok12' });
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: 'LOGIN',
+        userId: userRow.id,
+        metadata: { success: true },
+      });
+    });
+
+    it('audit registra LOGIN failed com userId=null quando user não existe', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({ email: 'x@x.com', password: 'abcdefgh' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: 'LOGIN',
+        userId: null,
+        metadata: {
+          success: false,
+          email: 'x@x.com',
+          reason: 'user_not_found',
+        },
+      });
+    });
+
+    it('audit registra LOGIN failed com userId real quando senha errada', async () => {
+      prisma.user.findUnique.mockResolvedValue(userRow);
+      bcryptCompare.mockResolvedValue(false);
+
+      await expect(
+        service.login({ email: 'rafa@example.com', password: 'errada12' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: 'LOGIN',
+        userId: userRow.id,
+        metadata: { success: false, reason: 'wrong_password' },
+      });
     });
 
     describe('parseExpiresInSeconds (via login)', () => {

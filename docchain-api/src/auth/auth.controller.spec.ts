@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { AuditAction } from '@prisma/client';
 import { Response } from 'express';
+import { AuditLogService } from '../audit/audit-log.service';
 import { AuthController } from './auth.controller';
 import { AuthService, AuthenticatedUser } from './auth.service';
 
@@ -11,6 +13,7 @@ describe('AuthController', () => {
     login: jest.Mock;
   };
   let config: { get: jest.Mock };
+  let audit: { log: jest.Mock };
 
   const user: AuthenticatedUser = {
     id: 'u1',
@@ -30,12 +33,14 @@ describe('AuthController', () => {
       login: jest.fn(),
     };
     config = { get: jest.fn() };
+    audit = { log: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: ConfigService, useValue: config },
+        { provide: AuditLogService, useValue: audit },
       ],
     }).compile();
 
@@ -103,11 +108,11 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/logout', () => {
-    it('apaga cookie (maxAge 0)', () => {
+    it('apaga cookie (maxAge 0) + grava LOGOUT no audit', async () => {
       config.get.mockReturnValue('development');
       const res = makeRes();
 
-      controller.logout(res);
+      await controller.logout(user, res);
 
       expect(res.cookie).toHaveBeenCalledWith('access_token', '', {
         httpOnly: true,
@@ -116,13 +121,17 @@ describe('AuthController', () => {
         path: '/',
         maxAge: 0,
       });
+      expect(audit.log).toHaveBeenCalledWith({
+        action: AuditAction.LOGOUT,
+        userId: user.id,
+      });
     });
 
-    it('em produção apaga com secure:true', () => {
+    it('em produção apaga com secure:true', async () => {
       config.get.mockReturnValue('production');
       const res = makeRes();
 
-      controller.logout(res);
+      await controller.logout(user, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
         'access_token',

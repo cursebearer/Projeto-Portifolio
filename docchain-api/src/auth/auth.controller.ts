@@ -9,7 +9,11 @@ import {
   Get,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { AuditAction } from '@prisma/client';
 import type { Response } from 'express';
+import { AuditLogService } from '../audit/audit-log.service';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -19,20 +23,24 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
+    private readonly audit: AuditLogService,
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto): Promise<AuthenticatedUser> {
     return this.authService.register(dto);
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
@@ -44,13 +52,19 @@ export class AuthController {
   }
 
   @Post('logout')
+  @ApiCookieAuth('access_token')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  logout(@Res({ passthrough: true }) res: Response): void {
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     this.clearAccessTokenCookie(res);
+    await this.audit.log({ action: AuditAction.LOGOUT, userId: user.id });
   }
 
   @Get('me')
+  @ApiCookieAuth('access_token')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;

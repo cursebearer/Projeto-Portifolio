@@ -14,6 +14,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCookieAuth,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Document } from '@prisma/client';
 import type { Response } from 'express';
 import type { AuthenticatedUser } from '../auth/auth.service';
@@ -23,6 +29,8 @@ import { ListDocumentsQueryDto } from './dto/list-documents.query.dto';
 import { DocumentsService } from './documents.service';
 import { PaginatedDocuments } from './documents.types';
 
+@ApiTags('documents')
+@ApiCookieAuth('access_token')
 @Controller('documents')
 @UseGuards(JwtAuthGuard)
 export class DocumentsController {
@@ -31,6 +39,14 @@ export class DocumentsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
   upload(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,

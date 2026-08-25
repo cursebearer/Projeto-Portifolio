@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -9,6 +11,7 @@ import { BlockchainModule } from './blockchain/blockchain.module';
 import { CommonModule } from './common/common.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { DocumentsModule } from './documents/documents.module';
+import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
 import { VerificationModule } from './verification/verification.module';
@@ -33,7 +36,22 @@ import { VerificationModule } from './verification/verification.module';
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
+        LOG_LEVEL: Joi.string()
+          .valid('verbose', 'debug', 'log', 'warn', 'error', 'fatal')
+          .default('log'),
+        THROTTLE_TTL_SECONDS: Joi.number().default(60),
+        THROTTLE_LIMIT: Joi.number().default(100),
       }),
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl:
+            config.get<number>('THROTTLE_TTL_SECONDS', 60) * 1000,
+          limit: config.get<number>('THROTTLE_LIMIT', 100),
+        },
+      ],
     }),
     PrismaModule,
     CommonModule,
@@ -44,8 +62,12 @@ import { VerificationModule } from './verification/verification.module';
     AuthModule,
     DocumentsModule,
     VerificationModule,
+    HealthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
