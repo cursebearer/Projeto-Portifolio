@@ -950,11 +950,11 @@ A API do MVP, conforme `planning/API_SPEC.md`, expõe os endpoints de autentica�
 
 | Direito (Art. 18) | Implementação | Status |
 |---|---|---|
-| **Confirmação e acesso aos dados** | `GET /documents` lista os documentos do usuário autenticado; rota `GET /auth/me` retorna `User` (id, email, name, createdAt) | `GET /documents` ✅ no API_SPEC; `GET /auth/me` previsto em M2 |
+| **Confirmação e acesso aos dados** | `GET /documents` lista os documentos do usuário autenticado; rota `GET /auth/me` retorna `User` (id, email, name, createdAt) | `GET /documents` atendido no API_SPEC; `GET /auth/me` previsto em M2 |
 | **Correção** | `PATCH /auth/me` permite alterar `name` (e-mail é imutável após cadastro para preservar integridade da chave única) | Previsto em M2 |
 | **Eliminação / anonimização** | `DELETE /auth/me`: (a) remove os arquivos cifrados de `${UPLOAD_DIR}` correspondentes a `Document.storageRef`, (b) deleta registros de `Document` em cascata via Prisma, (c) anonimiza `AuditLog` e `VerificationAttempt` setando `userId = NULL` (registro operacional preservado, vínculo pessoal removido), (d) deleta `User` | Previsto em M2 |
 | **Portabilidade** | `GET /auth/me/export` retorna JSON com `User` + lista de `Document` (metadados, `hash`, `txHash`, datas) | Previsto em M2 |
-| **Informação sobre compartilhamento** | DocChain não compartilha dados pessoais com terceiros — não há analytics externos, ad networks ou processadores de pagamento no MVP. O único dado que sai do sistema é o `hash` SHA-256 enviado à Sepolia, que não identifica o titular | ✅ por design |
+| **Informação sobre compartilhamento** | DocChain não compartilha dados pessoais com terceiros — não há analytics externos, ad networks ou processadores de pagamento no MVP. O único dado que sai do sistema é o `hash` SHA-256 enviado à Sepolia, que não identifica o titular | Atendido por design |
 | **Revogação de consentimento** | Equivale à eliminação de conta (`DELETE /auth/me`) | Previsto em M2 |
 
 > **Observação:** os endpoints marcados como "previsto em M2" devem ser adicionados ao `planning/API_SPEC.md` antes do início da fase 2. Sua especificação completa (DTOs, respostas, códigos de erro) é parte do escopo do marco M2.
@@ -979,7 +979,7 @@ O desenvolvimento do DocChain está organizado em **5 fases sequenciais**, total
 
 | Marco | Descrição | Entregáveis | Prazo |
 |---|---|---|---|
-| **M0 — Setup e Infraestrutura** | Bootstrap dos três repositórios (`docchain-contracts`, `docchain-api`, `docchain-web`), Docker Compose com PostgreSQL, `.env` de exemplo e CI básico no GitHub Actions. | 3 repos inicializados, `docker compose up` saudável, lint/typecheck verde | **Concluído em 2026-05-22** ✅ |
+| **M0 — Setup e Infraestrutura** | Bootstrap dos três repositórios (`docchain-contracts`, `docchain-api`, `docchain-web`), Docker Compose com PostgreSQL, `.env` de exemplo e CI básico no GitHub Actions. | 3 repos inicializados, `docker compose up` saudável, lint/typecheck verde | **Concluído em 2026-05-22** |
 | **M1 — Smart Contract** | Implementação do `DocumentRegistry.sol`, suíte de testes Hardhat, deploy na Sepolia e verificação no Etherscan. | Contrato deployado, endereço documentado, ≥ 90% cobertura nos testes | **2026-07-05** |
 | **M2 — Backend (API)** | Módulos AuthModule, DocumentsModule, CryptoService, StorageModule, BlockchainModule e PrismaModule; documentação Swagger; testes unitários e e2e. | API funcional `localhost:3000`, Swagger em `/api/docs`, cobertura ≥ 70% | **2026-08-09** |
 | **M3 — Frontend (Web)** | Telas de login, cadastro, dashboard, upload, detalhe do documento e verificação pública; estado global com Zustand; integração completa com a API. | Web em `localhost:3001`, fluxo end-to-end funcionando, deploy preview na Vercel | **2026-09-06** |

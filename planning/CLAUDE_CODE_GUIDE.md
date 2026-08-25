@@ -362,8 +362,8 @@ Implementa:
 
 1. components/documents/VerifyDropzone.tsx — dropzone inline para verificação
 2. components/documents/VerificationResult.tsx — exibe resultado com ícone grande:
-   - ✅ verde: "Documento Autêntico" com detalhes
-   - ❌ vermelho: "Verificação Falhou" com razão
+   - Estado sucesso (verde): "Documento Autêntico" com detalhes
+   - Estado falha (vermelho): "Verificação Falhou" com razão
 
 3. Página /documents/[id]:
    - Fetch GET /documents/:id

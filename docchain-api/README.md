@@ -93,8 +93,10 @@ src/
 
 ## Roadmap Fase 2
 
-- ✅ Sessão 1 — Prisma + AuthModule (register/login/logout/me)
-- ⏳ Sessão 2 — CryptoService + StorageModule
-- ⏳ Sessão 3 — BlockchainModule
-- ⏳ Sessão 4 — DocumentsModule (upload/verify/download)
-- ⏳ Sessão 5 — Polish (Swagger, health, rate limit, seed)
+- Sessão 1 — Prisma + AuthModule (register/login/logout/me) — CONCLUÍDA
+- Sessão 2 — CryptoService + StorageModule — CONCLUÍDA
+- Sessão 3 — BlockchainModule — CONCLUÍDA
+- Sessão 4 — DocumentsModule (upload/verify/download) — CONCLUÍDA
+- Sessão 5 — Polish (Swagger, health, rate limit, logging estruturado) — CONCLUÍDA
+
+Fase 2 completa. Ver `planning/ROADMAP.md` pra detalhes de cada sessão.

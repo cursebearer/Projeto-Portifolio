@@ -12,7 +12,7 @@ Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4
 
 ---
 
-## Fase 0 — Setup e Infraestrutura (1 dia) ✅ CONCLUÍDA
+## Fase 0 — Setup e Infraestrutura (1 dia) — CONCLUÍDA
 
 **Objetivo:** Ambiente de desenvolvimento 100% funcional antes de escrever qualquer código de produto.
 
@@ -77,7 +77,7 @@ Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contrat
 - [x] Copiar ABI gerada para `docchain-api/src/blockchain/abi/DocumentRegistry.json`
 - [x] Salvar endereço do contrato em variável de ambiente `CONTRACT_ADDRESS`
 
-### ✅ Fase 1 concluída (2026-08-12)
+### Fase 1 concluída (2026-08-12)
 
 - **Contrato deployed:** [`0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e`](https://sepolia.etherscan.io/address/0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e#code)
 - **Rede:** Sepolia (chainId 11155111)
@@ -85,7 +85,7 @@ Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contrat
 - **Testes:** 13 passing, cobertura 100% (statements / branches / funcs / lines)
 - **ABI publicada:** `docchain-api/src/blockchain/abi/DocumentRegistry.json`
 - **Metadata deploy:** `docchain-contracts/deployments/sepolia.json`
-- **Etherscan verify:** ✔ código-fonte publicado no explorer
+- **Etherscan verify:** código-fonte publicado no explorer
 
 ### Critério de conclusão da Fase 1
 ```bash
@@ -99,7 +99,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 
 **Objetivo:** API REST completa, funcional, com todos os fluxos testados via Postman/Insomnia.
 
-### 2.1 Configuração base (dia 1) ✅
+### 2.1 Configuração base (dia 1) — CONCLUÍDA
 - [x] ConfigModule com validação de env vars (joi)
 - [x] PrismaModule global com PrismaService
 - [x] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
@@ -120,20 +120,20 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
 - [x] Decorador `@CurrentUser()` para extrair usuário do token
 
-### 2.3 CryptoService (dia 2) ✅
+### 2.3 CryptoService (dia 2) — CONCLUÍDA
 - [x] `hashFile(buffer: Buffer): string` — SHA-256 hex
 - [x] `encrypt(buffer: Buffer): EncryptedPayload` — AES-256-GCM
 - [x] `decrypt(payload: EncryptedPayload): Buffer`
 - [x] `serializePayload` / `deserializePayload` (formato `iv|authTag|ciphertext`)
 - [x] Testes unitários do CryptoService — 17 testes, 100% statements
 
-### 2.4 StorageModule (dia 2) ✅
+### 2.4 StorageModule (dia 2) — CONCLUÍDA
 - [x] Interface `IStorageService` + token DI `STORAGE_SERVICE` (permite trocar Local por IPFS)
 - [x] `LocalStorageService` — save / retrieve / delete / exists em `${UPLOAD_DIR}/{hash}.enc`
 - [x] Validação regex hash SHA-256 (bloqueia path traversal)
 - [x] Testes do StorageService — 13 testes, 100% statements
 
-### 2.5 BlockchainModule (dia 3) ✅
+### 2.5 BlockchainModule (dia 3) — CONCLUÍDA
 - [x] `BlockchainService` com Ethers.js v6
 - [x] Conecta ao contrato via ABI + endereço + RPC Sepolia (Provider/Signer/Contract in-service)
 - [x] `registerDocument(hash, storageRef)` — chama contrato + aguarda `tx.wait()` (1 confirmação)
@@ -146,7 +146,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 
 ### 2.6 DocumentsModule (dia 3-4)
 
-**2.6a — Core CRUD (Sessão 4a) ✅**
+**2.6a — Core CRUD (Sessão 4a) — CONCLUÍDA**
 - [x] `POST /documents` — fluxo síncrono hash → encrypt → save → register → CONFIRMED
 - [x] `GET /documents` — paginado + filtro status + `deletedAt IS NULL`
 - [x] `GET /documents/:id` — 404 se não é dono (evita vazar existência)
@@ -156,7 +156,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Rollback: falha em storage/blockchain marca FAILED + apaga file + rethrow
 - [ ] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
 
-**2.6b — Verify + Audit (Sessão 4b) ✅**
+**2.6b — Verify + Audit (Sessão 4b) — CONCLUÍDA**
 - [x] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
 - [x] `GET /verify/public/:hash` — pública + regex `^(0x)?[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
 - [x] `AuditLogService.log(action, userId?, ...)` — não bloqueia fluxo (warn no fail)
@@ -165,9 +165,9 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Retro-instrumentar endpoints da 4a com AuditLog UPLOAD/DELETE/DOWNLOAD
 - [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 5** (instrumentar AuthController)
 
-### 2.6b AuditLog + VerificationAttempt (dia 4) ✅ (feito na Sessão 4b)
+### 2.6b AuditLog + VerificationAttempt (dia 4) — CONCLUÍDA (feito na Sessão 4b)
 
-### 2.7 Polish e documentação (dia 5) ✅
+### 2.7 Polish e documentação (dia 5) — CONCLUÍDA
 - [x] Swagger configurado (`@nestjs/swagger`) em `/api/docs` — cookie auth `access_token`
 - [x] Health check endpoint `GET /health` (DB via `SELECT 1` + blockchain via `getBlockNumber` com timeout 5s)
 - [x] Rate limiting global (`@nestjs/throttler`) — 100 req/min padrão, mais restrito em `/auth/login` (10/min), `/auth/register` (5/min), `/verify/public/:hash` (30/min), `/health` skip
@@ -193,7 +193,7 @@ Via Postman/Insomnia, executar o fluxo completo:
 6. POST /documents/verify (arquivo alterado) → hashMatch: false
 ```
 
-### 🚧 Fase 2 Sessão 1 concluída (2026-08-18)
+### Fase 2 Sessão 1 concluída (2026-08-18)
 
 - **Prisma schema:** 4 models (User, Document, AuditLog, VerificationAttempt) + 4 enums, migration `20260818043522_init` aplicada
 - **PrismaModule:** global, connect/disconnect no lifecycle
@@ -201,7 +201,7 @@ Via Postman/Insomnia, executar o fluxo completo:
 - **10 testes E2E via curl verdes:** 201/409/400/400/200+cookie/401/200/401/204/401
 - **Ajuste técnico:** downgrade Prisma 7.6 → 6.19 (v7 exige adapter novo, incompatível com nossa spec)
 
-### 🚧 Fase 2 Sessão 2 concluída (2026-08-24)
+### Fase 2 Sessão 2 concluída (2026-08-24)
 
 - **CryptoModule:** `CryptoService` global — SHA-256 hex + AES-256-GCM (IV 12B, authTag 16B) + serialize/deserialize (`iv|authTag|ciphertext`)
 - **StorageModule:** interface `IStorageService` + token `STORAGE_SERVICE` (troca Local↔IPFS futura) + `LocalStorageService` (save/retrieve/delete/exists em `${UPLOAD_DIR}/{hash}.enc`)
@@ -215,7 +215,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - `cookieExtractor` e `extractCurrentUser` extraídos como exports pra permitir teste unitário
 - **Débito remanescente (Sessão 5):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
 
-### 🚧 Fase 2 Sessão 3 concluída (2026-08-24)
+### Fase 2 Sessão 3 concluída (2026-08-24)
 
 - **BlockchainModule (global):** `BlockchainService` com ethers.js v6
 - **Endpoints do contrato usados:** `registerDocument` / `verifyDocument` / `isRegistered` (os 3 do ABI que a API precisa)
@@ -229,7 +229,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - Mock do módulo `ethers` via `jest.mock` — expõe `__contractInstance` compartilhado
   - Tests `it.each` cobrem os 3 envs obrigatórios (RPC/PRIVATE_KEY/ADDRESS)
 
-### 🚧 Fase 2 Sessão 4a concluída (2026-08-24)
+### Fase 2 Sessão 4a concluída (2026-08-24)
 
 - **DocumentsModule:** `DocumentsService` + `DocumentsController` + `ListDocumentsQueryDto`
 - **Multer:** `MulterModule.registerAsync` com `memoryStorage()` + limite `MAX_FILE_SIZE_MB` (default 50)
@@ -253,7 +253,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - `import type` obrigatório em `AuthenticatedUser` e `IStorageService` (isolatedModules + emitDecoratorMetadata)
   - `ParseUUIDPipe` no `:id` bloqueia UUID inválido antes do service
 
-### 🚧 Fase 2 Sessão 4b concluída (2026-08-24)
+### Fase 2 Sessão 4b concluída (2026-08-24)
 
 - **CommonModule (global):** `RequestContextService` (AsyncLocalStorage built-in) + `RequestContextInterceptor` registrado via `APP_INTERCEPTOR` — captura ip + userAgent + userId em todo request
   - Zero dependência externa (sem `nestjs-cls` etc.)
@@ -274,7 +274,7 @@ Via Postman/Insomnia, executar o fluxo completo:
   - `VerifyController` sem prefix (`@Controller()`) porque endpoints ficam em paths diferentes (`documents/verify` e `verify/public/:hash`)
 - **Débito Sessão 5:** AuditLog para LOGIN/LOGOUT/REGISTER (instrumentar AuthController)
 
-### 🎯 Fase 2 Sessão 5 concluída (2026-08-25)
+### Fase 2 Sessão 5 concluída (2026-08-25)
 
 - **Swagger:** `SwaggerModule` em `/api/docs` — cookie auth `access_token`, tags `auth`/`documents`/`verification`/`health`, decorators `@ApiProperty` nos DTOs, `@ApiConsumes('multipart/form-data')` no upload
 - **HealthModule:** `HealthController` + `HealthService` — checa Prisma (`$queryRaw`SELECT 1``) + `BlockchainService.getBlockNumber()` (timeout 5s), retorna `200 ok` ou `503 degraded` com detail por check, `@SkipThrottle()`
@@ -388,9 +388,9 @@ Executar o fluxo completo via browser:
 
 | Fase | Tempo | Status |
 |---|---|---|
-| Fase 0 — Setup | 1 dia | ✅ Concluída |
-| Fase 1 — Smart Contract | 2 dias | ✅ Concluída |
-| Fase 2 — Backend | 5 dias | 🚧 Em andamento (Sessão 4b/5) |
+| Fase 0 — Setup | 1 dia | Concluída |
+| Fase 1 — Smart Contract | 2 dias | Concluída |
+| Fase 2 — Backend | 5 dias | Concluída |
 | Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
 | Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
 | **Total** | **~14 dias úteis** | |

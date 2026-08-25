@@ -81,7 +81,7 @@ export const config = {
 
 ```
 ┌────────────────────────────────────────┐
-│          🔗 DocChain                   │
+│             DocChain                   │
 │  Registro de documentos com blockchain │
 │                                        │
 │  Email ________________________________│
@@ -115,9 +115,9 @@ export const config = {
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │ Nome          │ Hash       │ Status    │ Data  │ Ação │  │
 │  ├──────────────────────────────────────────────────────┤  │
-│  │ contrato.pdf  │ a3f5c8...  │ ✅ Conf.  │ 01/01 │  →  │  │
-│  │ nota_fiscal.. │ b8d2e1...  │ ⏳ Pend.  │ 01/01 │  →  │  │
-│  │ relatorio.doc │ c9f3a2...  │ ✅ Conf.  │ 31/12 │  →  │  │
+│  │ contrato.pdf  │ a3f5c8...  │ Conf.     │ 01/01 │  →  │  │
+│  │ nota_fiscal.. │ b8d2e1...  │ Pend.     │ 01/01 │  →  │  │
+│  │ relatorio.doc │ c9f3a2...  │ Conf.     │ 31/12 │  →  │  │
 │  └──────────────────────────────────────────────────────┘  │
 │                                                             │
 │  ← Anterior   Página 1 de 5   Próxima →                    │
@@ -139,18 +139,18 @@ export const config = {
 │                                                             │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │                                                       │  │
-│  │       ☁ Arraste o arquivo aqui ou clique              │  │
+│  │         Arraste o arquivo aqui ou clique              │  │
 │  │           para selecionar                             │  │
 │  │                                                       │  │
 │  │     Formatos aceitos: PDF, XML, DOC, XLSX, etc.       │  │
 │  │     Tamanho máximo: 50MB                              │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                                                             │
-│  — Arquivo selecionado: contrato.pdf (1.2 MB) ✓            │
+│  — Arquivo selecionado: contrato.pdf (1.2 MB)              │
 │                                                             │
 │  [   Registrar na Blockchain   ]                            │
 │                                                             │
-│  ⚠ O processo pode levar 15-30 segundos enquanto           │
+│  Aviso: o processo pode levar 15-30 segundos enquanto      │
 │    aguardamos confirmação na Sepolia.                       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -176,7 +176,7 @@ error       → mensagem de erro + botão tentar novamente
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ← Voltar              contrato.pdf              ✅ Conf.   │
+│  ← Voltar              contrato.pdf               Conf.    │
 │                                                             │
 │  ┌──────────────────────────┐  ┌──────────────────────────┐ │
 │  │  Informações do Arquivo  │  │  Registro Blockchain     │ │
@@ -190,7 +190,7 @@ error       → mensagem de erro + botão tentar novamente
 │                                                             │
 │  Hash SHA-256:                                              │
 │  a3f5c8d2e1b09f4e3c7a6b5d4f2e1c8a9b3d5f7e2c4a6b8d0f1e3c5  │
-│  [📋 Copiar]                                               │
+│  [ Copiar ]                                                │
 │                                                             │
 │  ─────────────────────────────────────────────────────────  │
 │  Verificar Integridade                                      │
@@ -211,11 +211,11 @@ error       → mensagem de erro + botão tentar novamente
 
 **Resultado de verificação (inline):**
 ```
-✅ DOCUMENTO AUTÊNTICO
+DOCUMENTO AUTÊNTICO
    Hash corresponde ao registro original.
    Confirmado na blockchain Sepolia em 01/01/2024.
 
-❌ VERIFICAÇÃO FALHOU
+VERIFICAÇÃO FALHOU
    O hash do arquivo enviado não corresponde ao registro.
    O documento pode ter sido modificado após o registro.
 ```
@@ -226,7 +226,7 @@ error       → mensagem de erro + botão tentar novamente
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│               🔍 Verificar Documento                        │
+│                 Verificar Documento                         │
 │                                                             │
 │  Verifique a autenticidade de qualquer documento            │
 │  registrado no DocChain sem precisar de conta.             │
@@ -262,10 +262,10 @@ const variants = {
 };
 
 const labels = {
-  PENDING:    '⏳ Pendente',
-  PROCESSING: '🔄 Processando',
-  CONFIRMED:  '✅ Confirmado',
-  FAILED:     '❌ Falhou',
+  PENDING:    'Pendente',
+  PROCESSING: 'Processando',
+  CONFIRMED:  'Confirmado',
+  FAILED:     'Falhou',
 };
 ```
 

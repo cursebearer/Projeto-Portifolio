@@ -7,7 +7,7 @@ Swagger UI:  http://localhost:3000/api/docs
 ```
 
 ## Autenticação
-Todas as rotas marcadas com 🔒 requerem **cookie httpOnly** `access_token` enviado automaticamente pelo navegador.
+Todas as rotas marcadas com **[auth]** requerem **cookie httpOnly** `access_token` enviado automaticamente pelo navegador.
 
 O backend emite o cookie em `POST /auth/login` via header:
 ```
@@ -78,7 +78,7 @@ Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=
 
 ---
 
-### POST /auth/logout 🔒
+### POST /auth/logout [auth]
 Encerra a sessão descartando o cookie no navegador.
 
 **Response 204:**
@@ -88,7 +88,7 @@ Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 
 ---
 
-### GET /auth/me 🔒
+### GET /auth/me [auth]
 Retorna dados do usuário autenticado (usado pelo frontend para hidratar o Zustand store após login, já que o JWT vive apenas no cookie httpOnly). Também atende o direito de **confirmação/acesso** (LGPD Art. 18, I-II).
 
 **Response 200:**
@@ -106,7 +106,7 @@ Retorna dados do usuário autenticado (usado pelo frontend para hidratar o Zusta
 
 ---
 
-### PATCH /auth/me 🔒
+### PATCH /auth/me [auth]
 Atualiza dados do usuário autenticado. Atende o direito de **correção** (LGPD Art. 18, III).
 
 Apenas `name` é editável. O `email` é imutável após cadastro para preservar a integridade da chave única.
@@ -126,7 +126,7 @@ Apenas `name` é editável. O `email` é imutável após cadastro para preservar
 
 ---
 
-### DELETE /auth/me 🔒
+### DELETE /auth/me [auth]
 Elimina a conta do usuário e todos os seus dados pessoais. Atende o direito de **eliminação / anonimização** (LGPD Art. 18, VI) e a **revogação de consentimento**.
 
 Comportamento (executado em transação):
@@ -145,7 +145,7 @@ Comportamento (executado em transação):
 
 ---
 
-### GET /auth/me/export 🔒
+### GET /auth/me/export [auth]
 Retorna JSON com todos os dados pessoais do usuário. Atende o direito de **portabilidade** (LGPD Art. 18, V).
 
 **Response 200:**
@@ -187,7 +187,7 @@ Content-Disposition: attachment; filename="docchain-export-{userId}-{date}.json"
 
 ## Módulo: Documents
 
-### POST /documents 🔒
+### POST /documents [auth]
 Faz upload de um documento e executa o fluxo completo.
 
 **Content-Type:** `multipart/form-data`
@@ -227,7 +227,7 @@ file: File  (obrigatório — qualquer tipo, max 50MB configurável)
 
 ---
 
-### GET /documents 🔒
+### GET /documents [auth]
 Lista documentos do usuário autenticado com paginação.
 
 **Query params:**
@@ -265,7 +265,7 @@ status  (opcional: PENDING | PROCESSING | CONFIRMED | FAILED)
 
 ---
 
-### GET /documents/:id 🔒
+### GET /documents/:id [auth]
 Retorna detalhe completo de um documento.
 
 **Response 200:** (mesmo formato do POST /documents)
@@ -275,7 +275,7 @@ Retorna detalhe completo de um documento.
 
 ---
 
-### POST /documents/verify 🔒
+### POST /documents/verify [auth]
 Verifica a integridade de um documento.
 
 Aceita duas formas:
@@ -330,7 +330,7 @@ documentId: string  (UUID do documento no sistema)
 
 ---
 
-### DELETE /documents/:id 🔒
+### DELETE /documents/:id [auth]
 Exclui um documento aplicando **soft-delete** (RF22-24).
 
 Comportamento:
@@ -346,7 +346,7 @@ Comportamento:
 
 ---
 
-### GET /documents/:id/download 🔒
+### GET /documents/:id/download [auth]
 Retorna o arquivo original (descriptografado).
 
 **Response 200:**
