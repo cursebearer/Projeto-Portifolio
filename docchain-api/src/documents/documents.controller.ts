@@ -27,7 +27,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ListDocumentsQueryDto } from './dto/list-documents.query.dto';
 import { DocumentsService } from './documents.service';
-import { PaginatedDocuments } from './documents.types';
+import { PaginatedDocuments, VersionTimeline } from './documents.types';
 
 @ApiTags('documents')
 @ApiCookieAuth('access_token')
@@ -95,5 +95,32 @@ export class DocumentsController {
       `attachment; filename="${encodeURIComponent(fileName)}"`,
     );
     res.send(buffer);
+  }
+
+  @Post(':id/versions')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  createVersion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) previousDocumentId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<Document> {
+    return this.documents.createVersion(user.id, previousDocumentId, file);
+  }
+
+  @Get(':id/versions')
+  versions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<VersionTimeline> {
+    return this.documents.findVersions(user.id, id);
   }
 }

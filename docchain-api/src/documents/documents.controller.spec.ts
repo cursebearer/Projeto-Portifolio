@@ -12,6 +12,8 @@ describe('DocumentsController', () => {
     findOne: jest.Mock;
     remove: jest.Mock;
     download: jest.Mock;
+    createVersion: jest.Mock;
+    findVersions: jest.Mock;
   };
 
   const user: AuthenticatedUser = {
@@ -28,6 +30,8 @@ describe('DocumentsController', () => {
       findOne: jest.fn(),
       remove: jest.fn(),
       download: jest.fn(),
+      createVersion: jest.fn(),
+      findVersions: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -120,6 +124,33 @@ describe('DocumentsController', () => {
         'Content-Disposition',
         expect.stringContaining('nota%20fiscal.pdf'),
       );
+    });
+  });
+
+  describe('versioning (Fase 2.9)', () => {
+    it('POST /documents/:id/versions delega para service.createVersion', async () => {
+      const file = { originalname: 'v2.pdf' } as Express.Multer.File;
+      documents.createVersion.mockResolvedValue({
+        id: 'd2',
+        previousDocumentId: 'd1',
+      });
+
+      const result = await controller.createVersion(user, 'd1', file);
+
+      expect(documents.createVersion).toHaveBeenCalledWith('u1', 'd1', file);
+      expect(result).toEqual({ id: 'd2', previousDocumentId: 'd1' });
+    });
+
+    it('GET /documents/:id/versions delega para service.findVersions', async () => {
+      documents.findVersions.mockResolvedValue({
+        root: { id: 'd1' },
+        versions: [],
+        totalVersions: 1,
+      });
+
+      await controller.versions(user, 'd1');
+
+      expect(documents.findVersions).toHaveBeenCalledWith('u1', 'd1');
     });
   });
 });

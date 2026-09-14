@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditAction, Document, DocumentStatus } from '@prisma/client';
+import { AuditAction, Document, DocumentStatus, Prisma } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { CryptoService } from '../crypto/crypto.service';
@@ -14,7 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { IStorageService } from '../storage/storage.interface';
 import { STORAGE_SERVICE } from '../storage/storage.interface';
 import { ListDocumentsQueryDto } from './dto/list-documents.query.dto';
-import { PaginatedDocuments } from './documents.types';
+import { PaginatedDocuments, VersionTimeline } from './documents.types';
 
 @Injectable()
 export class DocumentsService {
@@ -29,94 +29,21 @@ export class DocumentsService {
   ) {}
 
   async create(userId: string, file: Express.Multer.File): Promise<Document> {
-    if (!file) {
-      throw new BadRequestException('Arquivo obrigatório.');
-    }
+    return this.performRegistration(userId, file, null);
+  }
 
-    const hash = this.crypto.hashFile(file.buffer);
-
-    const existing = await this.prisma.document.findUnique({
-      where: { hash },
+  async createVersion(
+    userId: string,
+    previousDocumentId: string,
+    file: Express.Multer.File,
+  ): Promise<Document> {
+    const mother = await this.prisma.document.findFirst({
+      where: { id: previousDocumentId, userId, deletedAt: null },
     });
-    if (existing && !existing.deletedAt) {
-      throw new ConflictException('Documento com este hash já registrado.');
+    if (!mother) {
+      throw new NotFoundException('Documento-mãe não encontrado.');
     }
-
-    const document = await this.prisma.document.create({
-      data: {
-        userId,
-        fileName: file.originalname,
-        mimeType: file.mimetype,
-        fileSize: file.size,
-        hash,
-        status: DocumentStatus.PROCESSING,
-      },
-    });
-
-    try {
-      const encrypted = this.crypto.encrypt(file.buffer);
-      const serialized = this.crypto.serializePayload(encrypted);
-      const storageRef = await this.storage.save(hash, serialized);
-
-      await this.prisma.document.update({
-        where: { id: document.id },
-        data: {
-          storageRef,
-          encryptionIv: encrypted.iv.toString('base64'),
-          encryptionAuthTag: encrypted.authTag.toString('base64'),
-        },
-      });
-
-      const { txHash, blockNumber } = await this.blockchain.registerDocument(
-        hash,
-        storageRef,
-      );
-
-      const confirmed = await this.prisma.document.update({
-        where: { id: document.id },
-        data: {
-          status: DocumentStatus.CONFIRMED,
-          txHash,
-          blockNumber,
-          walletAddress: this.blockchain.signerAddress,
-          confirmedAt: new Date(),
-        },
-      });
-
-      await this.audit.log({
-        action: AuditAction.UPLOAD,
-        userId,
-        resourceType: 'Document',
-        resourceId: confirmed.id,
-        metadata: {
-          hash,
-          fileName: file.originalname,
-          txHash,
-          blockNumber,
-        },
-      });
-
-      return confirmed;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'erro desconhecido';
-      try {
-        await this.storage.delete(hash);
-      } catch (delErr) {
-        this.logger.warn(
-          `Rollback: falha ao apagar ${hash}.enc: ${
-            delErr instanceof Error ? delErr.message : delErr
-          }`,
-        );
-      }
-      await this.prisma.document.update({
-        where: { id: document.id },
-        data: {
-          status: DocumentStatus.FAILED,
-          errorMessage: message,
-        },
-      });
-      throw err;
-    }
+    return this.performRegistration(userId, file, previousDocumentId);
   }
 
   async findAll(
@@ -154,6 +81,17 @@ export class DocumentsService {
       throw new NotFoundException('Documento não encontrado.');
     }
     return doc;
+  }
+
+  async findVersions(userId: string, id: string): Promise<VersionTimeline> {
+    const doc = await this.findOne(userId, id);
+    const root = await this.resolveRoot(doc);
+    const descendants = await this.collectDescendants(root.id);
+    return {
+      root,
+      versions: descendants,
+      totalVersions: 1 + descendants.length,
+    };
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -206,5 +144,130 @@ export class DocumentsService {
     });
 
     return { buffer, fileName: doc.fileName, mimeType: doc.mimeType };
+  }
+
+  private async performRegistration(
+    userId: string,
+    file: Express.Multer.File,
+    previousDocumentId: string | null,
+  ): Promise<Document> {
+    if (!file) {
+      throw new BadRequestException('Arquivo obrigatório.');
+    }
+
+    const hash = this.crypto.hashFile(file.buffer);
+
+    const existing = await this.prisma.document.findUnique({
+      where: { hash },
+    });
+    if (existing && !existing.deletedAt) {
+      throw new ConflictException('Documento com este hash já registrado.');
+    }
+
+    const document = await this.prisma.document.create({
+      data: {
+        userId,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        hash,
+        status: DocumentStatus.PROCESSING,
+        previousDocumentId,
+      },
+    });
+
+    try {
+      const encrypted = this.crypto.encrypt(file.buffer);
+      const serialized = this.crypto.serializePayload(encrypted);
+      const storageRef = await this.storage.save(hash, serialized);
+
+      await this.prisma.document.update({
+        where: { id: document.id },
+        data: {
+          storageRef,
+          encryptionIv: encrypted.iv.toString('base64'),
+          encryptionAuthTag: encrypted.authTag.toString('base64'),
+        },
+      });
+
+      const { txHash, blockNumber } = await this.blockchain.registerDocument(
+        hash,
+        storageRef,
+      );
+
+      const confirmed = await this.prisma.document.update({
+        where: { id: document.id },
+        data: {
+          status: DocumentStatus.CONFIRMED,
+          txHash,
+          blockNumber,
+          walletAddress: this.blockchain.signerAddress,
+          confirmedAt: new Date(),
+        },
+      });
+
+      const metadata: Prisma.InputJsonValue = {
+        hash,
+        fileName: file.originalname,
+        txHash,
+        blockNumber,
+        ...(previousDocumentId ? { versionOf: previousDocumentId } : {}),
+      };
+      await this.audit.log({
+        action: AuditAction.UPLOAD,
+        userId,
+        resourceType: 'Document',
+        resourceId: confirmed.id,
+        metadata,
+      });
+
+      return confirmed;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'erro desconhecido';
+      try {
+        await this.storage.delete(hash);
+      } catch (delErr) {
+        this.logger.warn(
+          `Rollback: falha ao apagar ${hash}.enc: ${
+            delErr instanceof Error ? delErr.message : delErr
+          }`,
+        );
+      }
+      await this.prisma.document.update({
+        where: { id: document.id },
+        data: {
+          status: DocumentStatus.FAILED,
+          errorMessage: message,
+        },
+      });
+      throw err;
+    }
+  }
+
+  private async resolveRoot(doc: Document): Promise<Document> {
+    let current = doc;
+    while (current.previousDocumentId) {
+      const parent = await this.prisma.document.findUnique({
+        where: { id: current.previousDocumentId },
+      });
+      if (!parent) break;
+      current = parent;
+    }
+    return current;
+  }
+
+  private async collectDescendants(rootId: string): Promise<Document[]> {
+    const all: Document[] = [];
+    const queue = [rootId];
+    while (queue.length) {
+      const parentId = queue.shift() as string;
+      const children = await this.prisma.document.findMany({
+        where: { previousDocumentId: parentId },
+        orderBy: { uploadedAt: 'asc' },
+      });
+      all.push(...children);
+      queue.push(...children.map((c) => c.id));
+    }
+    return all;
   }
 }

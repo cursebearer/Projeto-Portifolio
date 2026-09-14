@@ -74,6 +74,7 @@ describe('DocumentsService', () => {
     confirmedAt: null,
     updatedAt: new Date(),
     deletedAt: null,
+    previousDocumentId: null,
   };
 
   beforeEach(async () => {
@@ -460,6 +461,166 @@ describe('DocumentsService', () => {
 
       await expect(
         service.download(userId, 'ghost'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('createVersion (Fase 2.9)', () => {
+    const motherId = 'doc-mother-1';
+    const motherDoc = {
+      ...baseDoc,
+      id: motherId,
+      hash: 'b'.repeat(64),
+      status: DocumentStatus.CONFIRMED,
+    };
+    const newHash = 'c'.repeat(64);
+    const versionDoc = {
+      ...baseDoc,
+      id: 'doc-v2',
+      hash: newHash,
+      previousDocumentId: motherId,
+    };
+
+    beforeEach(() => {
+      crypto.hashFile.mockReturnValue(newHash);
+      prisma.document.findFirst.mockResolvedValue(motherDoc);
+      prisma.document.findUnique.mockResolvedValue(null);
+      prisma.document.create.mockResolvedValue(versionDoc);
+      prisma.document.update
+        .mockResolvedValueOnce({
+          ...versionDoc,
+          storageRef: `local:${newHash}.enc`,
+        })
+        .mockResolvedValueOnce({
+          ...versionDoc,
+          status: DocumentStatus.CONFIRMED,
+          txHash: '0xdef',
+          blockNumber: 100,
+        });
+    });
+
+    it('cria versão vinculada à mãe (previousDocumentId setado)', async () => {
+      const result = await service.createVersion(userId, motherId, file);
+
+      expect(prisma.document.findFirst).toHaveBeenCalledWith({
+        where: { id: motherId, userId, deletedAt: null },
+      });
+      expect(prisma.document.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          previousDocumentId: motherId,
+          hash: newHash,
+        }),
+      });
+      expect(result.previousDocumentId).toBe(motherId);
+    });
+
+    it('audit log inclui versionOf no metadata', async () => {
+      await service.createVersion(userId, motherId, file);
+
+      expect(audit.log).toHaveBeenCalledWith({
+        action: AuditAction.UPLOAD,
+        userId,
+        resourceType: 'Document',
+        resourceId: versionDoc.id,
+        metadata: expect.objectContaining({
+          versionOf: motherId,
+          hash: newHash,
+        }),
+      });
+    });
+
+    it('404 se documento-mãe não pertence ao user', async () => {
+      prisma.document.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createVersion(userId, motherId, file),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.document.create).not.toHaveBeenCalled();
+    });
+
+    it('404 se documento-mãe está soft-deleted', async () => {
+      prisma.document.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createVersion(userId, motherId, file),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('409 se hash da nova versão já existe on-chain (arquivo idêntico)', async () => {
+      prisma.document.findUnique.mockResolvedValue({
+        ...baseDoc,
+        hash: newHash,
+        deletedAt: null,
+      });
+
+      await expect(
+        service.createVersion(userId, motherId, file),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(blockchain.registerDocument).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findVersions (Fase 2.9)', () => {
+    const rootDoc = { ...baseDoc, id: 'root', previousDocumentId: null };
+    const v2Doc = {
+      ...baseDoc,
+      id: 'v2',
+      hash: 'd'.repeat(64),
+      previousDocumentId: 'root',
+    };
+    const v3Doc = {
+      ...baseDoc,
+      id: 'v3',
+      hash: 'e'.repeat(64),
+      previousDocumentId: 'v2',
+    };
+
+    it('retorna timeline completa quando chamado a partir da raiz', async () => {
+      prisma.document.findFirst.mockResolvedValue(rootDoc);
+      prisma.document.findMany
+        .mockResolvedValueOnce([v2Doc])
+        .mockResolvedValueOnce([v3Doc])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.findVersions(userId, 'root');
+
+      expect(result.root).toBe(rootDoc);
+      expect(result.versions).toEqual([v2Doc, v3Doc]);
+      expect(result.totalVersions).toBe(3);
+    });
+
+    it('resolve raiz quando chamado a partir de versão intermediária', async () => {
+      prisma.document.findFirst.mockResolvedValue(v2Doc);
+      prisma.document.findUnique.mockResolvedValueOnce(rootDoc);
+      prisma.document.findMany
+        .mockResolvedValueOnce([v2Doc])
+        .mockResolvedValueOnce([v3Doc])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.findVersions(userId, 'v2');
+
+      expect(prisma.document.findUnique).toHaveBeenCalledWith({
+        where: { id: 'root' },
+      });
+      expect(result.root).toEqual(rootDoc);
+      expect(result.totalVersions).toBe(3);
+    });
+
+    it('doc único sem versões → totalVersions 1, versions vazio', async () => {
+      prisma.document.findFirst.mockResolvedValue(rootDoc);
+      prisma.document.findMany.mockResolvedValueOnce([]);
+
+      const result = await service.findVersions(userId, 'root');
+
+      expect(result.totalVersions).toBe(1);
+      expect(result.versions).toEqual([]);
+    });
+
+    it('404 se doc não pertence ao user', async () => {
+      prisma.document.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.findVersions(userId, 'root'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

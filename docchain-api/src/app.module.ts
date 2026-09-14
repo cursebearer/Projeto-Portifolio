@@ -12,7 +12,10 @@ import { CommonModule } from './common/common.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
+import { MailerModule } from './mailer/mailer.module';
+import { PdfModule } from './pdf/pdf.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SharingModule } from './sharing/sharing.module';
 import { StorageModule } from './storage/storage.module';
 import { VerificationModule } from './verification/verification.module';
 
@@ -41,6 +44,12 @@ import { VerificationModule } from './verification/verification.module';
           .default('log'),
         THROTTLE_TTL_SECONDS: Joi.number().default(60),
         THROTTLE_LIMIT: Joi.number().default(100),
+        SMTP_HOST: Joi.string().required(),
+        SMTP_PORT: Joi.number().default(465),
+        SMTP_USER: Joi.string().required(),
+        SMTP_PASSWORD: Joi.string().required(),
+        SMTP_FROM: Joi.string().required(),
+        SHARE_RATE_LIMIT_PER_HOUR: Joi.number().default(5),
       }),
     }),
     ThrottlerModule.forRootAsync({
@@ -59,10 +68,13 @@ import { VerificationModule } from './verification/verification.module';
     StorageModule,
     BlockchainModule,
     AuditModule,
+    MailerModule,
+    PdfModule,
     AuthModule,
     DocumentsModule,
     VerificationModule,
     HealthModule,
+    SharingModule,
   ],
   controllers: [AppController],
   providers: [

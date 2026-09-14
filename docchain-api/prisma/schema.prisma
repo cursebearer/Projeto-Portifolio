@@ -34,6 +34,7 @@ enum AuditAction {
   DELETE
   VERIFY_PUBLIC
   VERIFY_PRIVATE
+  SHARE
 }
 
 enum VerificationSource {
@@ -54,6 +55,7 @@ model User {
   documents            Document[]
   auditLogs            AuditLog[]
   verificationAttempts VerificationAttempt[]
+  documentShares       DocumentShare[]
 
   @@map("users")
 }
@@ -89,14 +91,42 @@ model Document {
   updatedAt    DateTime       @updatedAt @map("updated_at")
   deletedAt    DateTime?      @map("deleted_at")
 
+  previousDocumentId String?    @map("previous_document_id")
+  previousDocument   Document?  @relation("DocumentVersions", fields: [previousDocumentId], references: [id])
+  nextVersions       Document[] @relation("DocumentVersions")
+
   user                 User                  @relation(fields: [userId], references: [id])
   verificationAttempts VerificationAttempt[]
+  shares               DocumentShare[]
 
   @@index([userId])
   @@index([hash])
   @@index([status])
   @@index([deletedAt])
+  @@index([previousDocumentId])
   @@map("documents")
+}
+
+// ─────────────── document_shares ───────────────
+
+model DocumentShare {
+  id                String   @id @default(uuid())
+  documentId        String   @map("document_id")
+  sharedByUserId    String   @map("shared_by_user_id")
+  sharedWithEmail   String   @map("shared_with_email")
+  message           String?  @db.VarChar(500)
+  comprovanteHash   String   @map("comprovante_hash")
+  sentAt            DateTime @default(now()) @map("sent_at")
+  verificationCount Int      @default(0) @map("verification_count")
+
+  document     Document @relation(fields: [documentId], references: [id])
+  sharedByUser User     @relation(fields: [sharedByUserId], references: [id])
+
+  @@index([documentId])
+  @@index([sharedByUserId])
+  @@index([sharedWithEmail])
+  @@index([sentAt])
+  @@map("document_shares")
 }
 
 // ─────────────── audit_logs ───────────────

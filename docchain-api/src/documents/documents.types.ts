@@ -6,3 +6,9 @@ export interface PaginatedDocuments {
   page: number;
   limit: number;
 }
+
+export interface VersionTimeline {
+  root: Document;
+  versions: Document[];
+  totalVersions: number;
+}
