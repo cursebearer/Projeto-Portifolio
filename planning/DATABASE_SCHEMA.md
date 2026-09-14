@@ -39,6 +39,7 @@ enum AuditAction {
   DELETE
   VERIFY_PUBLIC   // /verify sem autenticação
   VERIFY_PRIVATE  // verificação via dashboard (RF16)
+  SHARE           // compartilhamento por email (Fase 2.8)
 }
 
 enum VerificationSource {
@@ -61,6 +62,7 @@ model User {
   documents             Document[]
   auditLogs             AuditLog[]
   verificationAttempts  VerificationAttempt[]
+  documentShares        DocumentShare[]
 
   @@map("users")
 }
@@ -105,15 +107,47 @@ model Document {
   updatedAt       DateTime       @updatedAt @map("updated_at")
   deletedAt       DateTime?      @map("deleted_at")         // soft-delete (RF22-24); registro on-chain permanece
 
+  // Versionamento (Fase 2.9) — self-reference nullable
+  previousDocumentId String?     @map("previous_document_id")
+  previousDocument   Document?   @relation("DocumentVersions", fields: [previousDocumentId], references: [id])
+  nextVersions       Document[]  @relation("DocumentVersions")
+
   // Relações
   user                  User                  @relation(fields: [userId], references: [id])
   verificationAttempts  VerificationAttempt[]
+  shares                DocumentShare[]
 
   @@index([userId])
   @@index([hash])
   @@index([status])
   @@index([deletedAt])
+  @@index([previousDocumentId])
   @@map("documents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// TABELA: document_shares (Fase 2.8)
+// Rastreia envios do documento por email — compliance + analytics
+// ─────────────────────────────────────────────────────────────
+
+model DocumentShare {
+  id                 String   @id @default(uuid())
+  documentId         String   @map("document_id")
+  sharedByUserId     String   @map("shared_by_user_id")     // dono que enviou
+  sharedWithEmail    String   @map("shared_with_email")     // destinatário externo (não precisa ter conta)
+  message            String?  @db.VarChar(500)                // mensagem opcional do remetente (limite 500 chars no DB + DTO)
+  comprovanteHash    String   @map("comprovante_hash")       // SHA-256 do PDF de comprovante gerado (auditoria)
+  sentAt             DateTime @default(now()) @map("sent_at")
+  verificationCount  Int      @default(0) @map("verification_count")  // incrementado quando QR do comprovante é escaneado
+
+  document           Document @relation(fields: [documentId], references: [id])
+  sharedByUser       User     @relation(fields: [sharedByUserId], references: [id])
+
+  @@index([documentId])
+  @@index([sharedByUserId])
+  @@index([sharedWithEmail])
+  @@index([sentAt])
+  @@map("document_shares")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -316,6 +350,112 @@ await this.prisma.verificationAttempt.create({
     userAgent: req.headers['user-agent'],
   },
 });
+```
+
+### Criar nova versão de documento (Fase 2.9)
+```typescript
+// Após executar todo o fluxo idêntico ao create() (hash → encrypt → save → registerOnChain → CONFIRMED)
+const newVersion = await this.prisma.document.create({
+  data: {
+    userId,
+    previousDocumentId: motherDocId,           // vincula à versão anterior
+    fileName: file.originalname,
+    mimeType: file.mimetype,
+    fileSize: file.size,
+    hash: newHash,
+    storageType: StorageType.LOCAL,
+    storageRef,
+    encryptionIv,
+    encryptionAuthTag,
+    txHash,
+    walletAddress,
+    blockNumber,
+    status: DocumentStatus.CONFIRMED,
+    confirmedAt: new Date(),
+  }
+});
+```
+
+### Buscar timeline de versões de um documento (Fase 2.9)
+```typescript
+// 1. Encontra a raiz da árvore (documento sem previousDocumentId)
+async function findRoot(docId: string): Promise<Document> {
+  let current = await this.prisma.document.findUnique({ where: { id: docId } });
+  while (current?.previousDocumentId) {
+    current = await this.prisma.document.findUnique({
+      where: { id: current.previousDocumentId }
+    });
+  }
+  return current;
+}
+
+// 2. Coleta todos descendentes (recursivo BFS)
+async function collectDescendants(rootId: string): Promise<Document[]> {
+  const all: Document[] = [];
+  const queue = [rootId];
+  while (queue.length) {
+    const parentId = queue.shift()!;
+    const children = await this.prisma.document.findMany({
+      where: { previousDocumentId: parentId }
+    });
+    all.push(...children);
+    queue.push(...children.map(c => c.id));
+  }
+  return all;
+}
+```
+
+### Registrar compartilhamento por email (Fase 2.8)
+```typescript
+// Após enviar email com sucesso
+await this.prisma.documentShare.create({
+  data: {
+    documentId,
+    sharedByUserId: currentUser.id,
+    sharedWithEmail: dto.email,
+    message: dto.message,
+    comprovanteHash,     // SHA-256 do PDF gerado (auditoria)
+  }
+});
+
+await this.prisma.auditLog.create({
+  data: {
+    userId: currentUser.id,
+    action: AuditAction.SHARE,
+    resourceType: 'document',
+    resourceId: documentId,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    metadata: { email: dto.email, hash: document.hash, comprovanteHash },
+  },
+});
+```
+
+### Rate limit de compartilhamento (5/hora por usuário)
+```typescript
+const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+const recentShares = await this.prisma.documentShare.count({
+  where: {
+    sharedByUserId: userId,
+    sentAt: { gte: oneHourAgo }
+  }
+});
+if (recentShares >= 5) {
+  throw new HttpException('Rate limit: 5 compartilhamentos/hora', 429);
+}
+```
+
+### Incrementar verificationCount quando QR do comprovante é escaneado
+```typescript
+// Em GET /verify/public/:hash, quando source vem do QR do comprovante
+// (adicionar query param ?ref=share:{shareId} no QR)
+if (req.query.ref?.startsWith('share:')) {
+  const shareId = req.query.ref.split(':')[1];
+  await this.prisma.documentShare.update({
+    where: { id: shareId },
+    data: { verificationCount: { increment: 1 } }
+  });
+}
 ```
 
 ---

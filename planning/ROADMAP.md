@@ -297,6 +297,101 @@ Via Postman/Insomnia, executar o fluxo completo:
 
 ---
 
+## Fase 2 — Extensões (pós-Sessão 5)
+
+Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend com dois casos de uso do mundo real: compartilhamento formal via email e versionamento de documentos que passam por assinatura/edição.
+
+### 2.8 SharingModule — Compartilhamento por email
+
+**Objetivo:** dono do documento envia o arquivo original + comprovante em PDF para um destinatário por email, permitindo verificação independente sem depender do frontend do DocChain.
+
+**Motivação:** caso de uso jurídico/negocial. Rafael registra contrato hoje e precisa provar autenticidade ao juiz daqui a 5 anos. Envia via DocChain, destinatário recebe doc + comprovante com QR + hash + tx — verifica offline (recalcula SHA-256) ou online (QR aponta pra `/verify/public/:hash`).
+
+**Escopo:**
+- [ ] `MailerModule` — `MailerService` usando `nodemailer` + provider SMTP (Resend/SendGrid — free tier suficiente pro TCC)
+- [ ] `PdfModule` — `PdfService` que gera comprovante 1-página com `pdfmake` + QR via `qrcode`
+- [ ] `SharingModule` — `SharingService.share(userId, docId, email, message?)`
+  1. Verifica ownership do documento (`Document.userId === currentUser.id`)
+  2. Bloqueia se `status !== CONFIRMED` (sem prova ainda)
+  3. Bloqueia se `deletedAt IS NOT NULL`
+  4. `storage.retrieve(hash)` + `crypto.deserialize` + `crypto.decrypt` → buffer original
+  5. `pdf.generateComprovante(document)` → buffer PDF
+  6. `mailer.send({ to, attachments: [original, comprovante], template })`
+  7. Cria row `DocumentShare` (rastreio)
+  8. `AuditLog.log(SHARE)` com destinatário no metadata
+- [ ] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
+- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain)
+- [ ] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
+- [ ] Novo enum `AuditAction.SHARE`
+- [ ] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `MAIL_PROVIDER` (Joi validation)
+- [ ] Specs: sharing.service.spec.ts, mailer.service.spec.ts, pdf.service.spec.ts, sharing.controller.spec.ts (nodemailer mockado com `jest.mock`)
+
+**Comprovante PDF — campos obrigatórios:**
+- Identificação: fileName, mimeType, fileSize, usuário emissor (nome+email), timestamp registro
+- Impressão digital: SHA-256 formatado em 2 linhas de 32 chars
+- On-chain: rede + chainId, endereço do contrato, txHash completo, blockNumber, timestamp on-chain, walletAddress DocChain
+- Verificação independente: passo-a-passo `sha256sum`/`certutil hashfile`, QR pra `/verify/public/:hash`, link Etherscan
+- Rodapé: data emissão do comprovante, versão do template (`v1.0`)
+
+**Testes:**
+- Ownership: outro user tenta compartilhar → 404
+- Status !== CONFIRMED → 400
+- Deleted → 404
+- Email inválido no DTO → 400 (class-validator)
+- Rate limit → 429
+- Mailer fail → 502 (não corrompe estado, não cria DocumentShare row)
+
+### 2.9 Versionamento de documentos
+
+**Objetivo:** permitir registrar uma nova versão de documento existente (ex: original sem assinatura → assinado → com contra-assinaturas), mantendo cronologia auditável on-chain.
+
+**Motivação:** hash SHA-256 é determinístico byte-a-byte. Se o documento é editado/assinado, o hash muda completamente e o registro on-chain original vira "prova da versão anterior". Cada versão precisa de novo registro on-chain independente, mas ligado à versão-mãe no banco off-chain.
+
+**Escopo:**
+- [ ] Migration Prisma: coluna `previousDocumentId String? @map("previous_document_id")` em `Document` (self-reference nullable)
+- [ ] Relação `previousDocument` / `nextVersions[]` no schema Prisma (index em `previousDocumentId`)
+- [ ] `DocumentsService.createVersion(userId, previousDocId, file)`
+  1. Verifica ownership do documento-mãe
+  2. Bloqueia se `deletedAt IS NOT NULL` na mãe (não versiona doc excluído)
+  3. Executa fluxo idêntico ao `create()` (hash → encrypt → save → registerOnChain → CONFIRMED)
+  4. Row nova salva `previousDocumentId` apontando pra mãe
+  5. `AuditLog.log(UPLOAD)` com metadata `{ versionOf: previousDocId }`
+- [ ] `POST /documents/:id/versions` — body `multipart/form-data` (file), 201 com nova versão completa
+- [ ] `GET /documents/:id/versions` — retorna timeline ordenada (raiz → folha) com N versões, cada uma com dados on-chain próprios
+- [ ] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes)
+- [ ] Regras:
+  - Qualquer versão pode originar nova versão (permite fork/branch — ex: v1 pode ter v2a e v2b em paralelo, caso o mesmo documento seja assinado por partes diferentes)
+  - Delete em qualquer versão só afeta aquela versão (soft-delete individual — não propaga pra ancestrais nem descendentes)
+  - Documento-mãe soft-deleted bloqueia criação de nova versão (`404`) mas não invalida versões pré-existentes
+- [ ] Specs: documents.service.spec.ts (createVersion + listVersions), documents.controller.spec.ts (novo endpoint)
+
+**Timeline pro frontend futuro:**
+```
+v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
+  └─ v2 (assinado)   → hash def... → tx2 (bloco 2000, 26/08 10:15)
+       └─ v3 (final) → hash ghi... → tx3 (bloco 3000, 27/08 14:00)
+```
+
+**Testes:**
+- Cria versão a partir de doc CONFIRMED → nova row com previousDocumentId, hash único on-chain
+- Tenta versionar doc de outro user → 404
+- Versionar doc soft-deleted → 404
+- Upload duplicado (hash já existe) → 409 (mesma regra do create)
+- `GET /versions` retorna cronologia correta
+- Delete de v2 não afeta v1 nem v3
+
+### Critério de conclusão da Fase 2 estendida
+```
+1. POST /documents (v1) → 201 CONFIRMED
+2. POST /documents/:v1id/versions com arquivo modificado → 201 CONFIRMED com previousDocumentId=v1id
+3. GET /documents/:v1id/versions → array [v1, v2]
+4. POST /documents/:v1id/share { email } → 202, email chega com 2 anexos (original + comprovante.pdf)
+5. Destinatário abre PDF → QR aponta pra /verify/public/:hash → 200 exists:true
+6. Suíte total ≥ 170 testes verdes, coverage global ≥ 75%
+```
+
+---
+
 ## Fase 3 — Frontend Next.js (4 dias)
 
 **Objetivo:** Interface funcional para todas as operações do sistema.
@@ -391,8 +486,9 @@ Executar o fluxo completo via browser:
 | Fase 0 — Setup | 1 dia | Concluída |
 | Fase 1 — Smart Contract | 2 dias | Concluída |
 | Fase 2 — Backend | 5 dias | Concluída |
-| Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
-| Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
-| **Total** | **~14 dias úteis** | |
+| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Não iniciado |
+| Fase 3 — Frontend | 4 dias | Não iniciado |
+| Fase 4 — Integração | 2 dias | Não iniciado |
+| **Total** | **~16 dias úteis** | |
 
 > Com sessões focadas de Claude Code, cada fase pode ser comprimida. O backend é a fase mais densa — reserve mais tempo se for a primeira vez com NestJS.

@@ -363,6 +363,139 @@ Content-Disposition: attachment; filename="contrato.pdf"
 
 ---
 
+### POST /documents/:id/share [auth]  (Fase 2.8)
+Envia o documento original + comprovante em PDF por email para um destinatário externo.
+
+**Rate limit:** 5 requisições/hora por usuário (evita spam via DocChain).
+
+**Body (application/json):**
+```json
+{
+  "email": "juiz@tribunal.gov.br",
+  "message": "Segue o contrato assinado para vosso conhecimento."
+}
+```
+
+**Campos:**
+- `email` (obrigatório) — endereço do destinatário (validado por `@IsEmail()`)
+- `message` (opcional) — mensagem livre incluída no corpo do email (máx 500 chars)
+
+**Fluxo interno:**
+1. Verifica ownership do documento (`Document.userId === currentUser.id`)
+2. Bloqueia se `status !== CONFIRMED` (sem prova on-chain ainda) → `400`
+3. Bloqueia se `deletedAt IS NOT NULL` (soft-deleted) → `404`
+4. `storage.retrieve(hash)` + `crypto.decrypt` → buffer original
+5. `pdf.generateComprovante(document)` → PDF com hash, txHash, blockNumber, QR pra `/verify/public/:hash`, link Etherscan
+6. `mailer.send({ to, subject, attachments: [original, comprovante] })`
+7. Cria row `DocumentShare` (rastreio: docId, email, sentAt, comprovanteHash)
+8. `AuditLog.log(SHARE)` com metadata `{ email, docId, hash }`
+
+**Response 202 Accepted:**
+```json
+{
+  "shareId": "share-uuid-1",
+  "documentId": "d-uuid-1",
+  "sharedWithEmail": "juiz@tribunal.gov.br",
+  "sentAt": "2026-09-15T10:30:00.000Z",
+  "comprovanteHash": "b2a1c9..."
+}
+```
+
+**Erros:**
+- `400` — email inválido, documento em status não-CONFIRMED, ou mensagem > 500 chars
+- `404` — documento não existe, não pertence ao usuário, ou soft-deleted
+- `429` — rate limit atingido (5/h)
+- `502` — falha no provedor SMTP (nada é gravado no banco, retry manual)
+
+**Comprovante PDF (anexo) — conteúdo:**
+- Identificação: fileName, mimeType, fileSize, usuário emissor, timestamp registro
+- Hash SHA-256 do documento
+- On-chain: rede, contrato, txHash, blockNumber, timestamp, walletAddress DocChain
+- Instruções de verificação independente (`sha256sum`, `certutil hashfile`)
+- QR code pra `docchain.dev/verify/public/{hash}`
+- Link direto pro Etherscan
+- Rodapé: data emissão + versão do template
+
+---
+
+### POST /documents/:id/versions [auth]  (Fase 2.9)
+Cria uma nova versão de um documento existente. Cada versão gera um novo hash SHA-256 e um novo registro on-chain independente, mantendo a cronologia via `previousDocumentId`.
+
+**Uso típico:** documento original (v1) → assinatura externa → upload da versão assinada (v2 ligada a v1) → contra-assinatura → v3 ligada a v2. Cada versão tem prova temporal própria on-chain.
+
+**Body (multipart/form-data):**
+```
+file: File   (nova versão do arquivo — hash deve ser único on-chain)
+```
+
+**Fluxo interno:**
+1. Verifica ownership do documento-mãe (`:id`)
+2. Bloqueia se documento-mãe `deletedAt IS NOT NULL` → `404`
+3. Executa fluxo idêntico ao `POST /documents` (hash → encrypt → save → `registerDocument` on-chain → CONFIRMED)
+4. Row nova salva com `previousDocumentId = :id`
+5. `AuditLog.log(UPLOAD)` com metadata `{ versionOf: :id }`
+
+**Response 201 Created:** (mesmo formato do POST /documents, com campo extra `previousDocumentId`)
+```json
+{
+  "id": "d-uuid-2",
+  "previousDocumentId": "d-uuid-1",
+  "fileName": "contrato-assinado.pdf",
+  "hash": "9b1e7f4a...",
+  "status": "CONFIRMED",
+  "txHash": "0x8f4feb...",
+  "blockNumber": 5847293,
+  ...
+}
+```
+
+**Erros:**
+- `400` — arquivo ausente ou hash malformado
+- `404` — documento-mãe não existe, não pertence ao usuário, ou soft-deleted
+- `409` — hash da nova versão já existe on-chain (arquivo idêntico já registrado)
+- `500` — falha genérica no fluxo (rollback aplicado, row FAILED)
+
+**Nota:** qualquer versão pode originar nova versão (fork/branch). Ex: v1 pode ter v2a (assinado por A) e v2b (assinado por B) em paralelo.
+
+---
+
+### GET /documents/:id/versions [auth]  (Fase 2.9)
+Retorna a timeline completa de versões de um documento, incluindo raízes e ramificações.
+
+**Params:** `id` (UUID de qualquer versão da árvore — backend resolve pra raiz e retorna a árvore inteira)
+
+**Response 200:**
+```json
+{
+  "root": {
+    "id": "d-uuid-1",
+    "fileName": "contrato.pdf",
+    "hash": "a3f5c8...",
+    "txHash": "0x8f4f...",
+    "blockNumber": 5847291,
+    "uploadedAt": "2026-08-25T15:30:14.000Z",
+    "previousDocumentId": null
+  },
+  "versions": [
+    {
+      "id": "d-uuid-2",
+      "previousDocumentId": "d-uuid-1",
+      "fileName": "contrato-assinado.pdf",
+      "hash": "9b1e7f...",
+      "txHash": "0x1a2b...",
+      "blockNumber": 5847293,
+      "uploadedAt": "2026-08-26T10:15:00.000Z"
+    }
+  ],
+  "totalVersions": 2
+}
+```
+
+**Erros:**
+- `404` — documento não existe ou não pertence ao usuário
+
+---
+
 ### GET /verify/public/:hash
 Verificação pública — sem autenticação. Consulta apenas a blockchain.
 
