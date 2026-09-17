@@ -34,7 +34,11 @@
    │  documents (soft-del.)  │  │  localhost:5001        │    │  Solidity          │
    │  audit_logs (LGPD)      │  │                        │    │                    │
    │  verification_attempts  │  │                        │    │                    │
+   │  document_shares (2.8)  │  │                        │    │                    │
    └─────────────────────────┘  └──────────────────────┘    └────────────────────┘
+
+Módulos adicionais (Fase 2.8):
+  SharingModule + MailerModule + PdfModule → provider SMTP externo (Resend/SendGrid)
 ```
 
 ---
@@ -88,7 +92,8 @@ Responsabilidade: orquestrar o fluxo completo do documento
 Dependências: StorageModule, BlockchainModule, CryptoService, PrismaService, AuditLogService
 Expõe: POST /documents, GET /documents, GET /documents/:id,
        DELETE /documents/:id, POST /documents/verify, GET /documents/:id/download,
-       GET /verify/public/:hash
+       GET /verify/public/:hash,
+       POST /documents/:id/versions, GET /documents/:id/versions  (Fase 2.9)
 Fluxo interno (upload):
   1. Recebe multipart/form-data
   2. Chama CryptoService.hash(buffer)
@@ -98,11 +103,56 @@ Fluxo interno (upload):
   6. Persiste metadados via PrismaService
   7. Registra AuditLog (action UPLOAD)
 
+Fluxo interno (createVersion — Fase 2.9):
+  1. Verifica ownership do documento-mãe + não soft-deleted
+  2. Executa fluxo idêntico ao upload (hash → encrypt → save → registerOnChain)
+  3. Persiste nova row com previousDocumentId apontando pra mãe
+  4. AuditLog action UPLOAD com metadata { versionOf: motherId }
+
 Fluxo interno (delete — RF22-24):
   1. Marca Document.deletedAt = now()
   2. StorageService.delete(`${hash}.enc`)
   3. AuditLog.create(action DELETE, metadata { hash, fileName })
   4. Registro on-chain permanece imutável
+```
+
+### SharingModule (Fase 2.8)
+```
+Responsabilidade: compartilhar documento por email com destinatário externo
+Dependências: DocumentsService, StorageService, CryptoService, PdfService, MailerService,
+              PrismaService, AuditLogService
+Expõe: POST /documents/:id/share
+Fluxo interno:
+  1. Verifica ownership + status CONFIRMED + não soft-deleted
+  2. storage.retrieve(hash) → crypto.decrypt → buffer original
+  3. pdf.generateComprovante(document) → PDF com hash + txHash + QR + link Etherscan
+  4. mailer.send({ to, attachments: [original, comprovante] })
+  5. Cria row DocumentShare (rastreio + verificationCount)
+  6. AuditLog action SHARE com metadata { email, hash, comprovanteHash }
+Rate limit: 5 shares/hora por usuário (query DocumentShare)
+```
+
+### MailerModule (Fase 2.8)
+```
+Responsabilidade: envio de emails transacionais
+Dependências: nodemailer, provider SMTP (Resend/SendGrid — free tier)
+Expõe: MailerService (injetável)
+Métodos:
+  - send({ to, subject, template, context, attachments? }): Promise<void>
+Envs: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, MAIL_PROVIDER
+Templates: handlebars ou string simples (share, welcome futuro, etc.)
+```
+
+### PdfModule (Fase 2.8)
+```
+Responsabilidade: gerar comprovante PDF em memória
+Dependências: pdfmake, qrcode
+Expõe: PdfService (injetável)
+Métodos:
+  - generateComprovante(document: Document): Promise<Buffer>
+    → PDF 1-página com: fileName, hash, txHash, blockNumber, walletAddress,
+       QR pra /verify/public/:hash, link Etherscan, instruções sha256sum/certutil
+    → Rodapé com timestamp emissão + versão template
 ```
 
 ### AuditLogModule
@@ -256,18 +306,29 @@ documents
   confirmed_at
   updated_at
   deleted_at  ← soft-delete (RF22-24); on-chain permanece
+  previous_document_id (FK → documents.id, nullable — versionamento Fase 2.9)
 
 audit_logs                                  ← LGPD + investigação
   id (UUID)
   user_id (FK → users.id, NULL em ações públicas)
   action (LOGIN | LOGOUT | REGISTER | UPLOAD | DOWNLOAD | DELETE |
-          VERIFY_PUBLIC | VERIFY_PRIVATE)
+          VERIFY_PUBLIC | VERIFY_PRIVATE | SHARE)
   resource_type
   resource_id
   ip_address
   user_agent
   metadata (JSONB)
   created_at
+
+document_shares (Fase 2.8)                  ← rastreio de compartilhamentos
+  id (UUID)
+  document_id (FK → documents.id)
+  shared_by_user_id (FK → users.id)
+  shared_with_email                          ← destinatário externo (não precisa conta)
+  message                                    ← opcional, máx 500 chars
+  comprovante_hash                           ← SHA-256 do PDF emitido (auditoria)
+  sent_at
+  verification_count                         ← incrementado ao escanear QR do comprovante
 
 verification_attempts                       ← analytics + anti-abuso
   id (UUID)

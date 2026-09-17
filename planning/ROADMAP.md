@@ -12,7 +12,7 @@ Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4
 
 ---
 
-## Fase 0 — Setup e Infraestrutura (1 dia) ✅ CONCLUÍDA
+## Fase 0 — Setup e Infraestrutura (1 dia) — CONCLUÍDA
 
 **Objetivo:** Ambiente de desenvolvimento 100% funcional antes de escrever qualquer código de produto.
 
@@ -77,7 +77,7 @@ Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contrat
 - [x] Copiar ABI gerada para `docchain-api/src/blockchain/abi/DocumentRegistry.json`
 - [x] Salvar endereço do contrato em variável de ambiente `CONTRACT_ADDRESS`
 
-### ✅ Fase 1 concluída (2026-08-12)
+### Fase 1 concluída (2026-08-12)
 
 - **Contrato deployed:** [`0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e`](https://sepolia.etherscan.io/address/0xEC85EB9bE437EeBA80ac1014dFf127615B20B88e#code)
 - **Rede:** Sepolia (chainId 11155111)
@@ -85,7 +85,7 @@ Cobertura de testes segue [TESTING_STRATEGY.md](TESTING_STRATEGY.md) — contrat
 - **Testes:** 13 passing, cobertura 100% (statements / branches / funcs / lines)
 - **ABI publicada:** `docchain-api/src/blockchain/abi/DocumentRegistry.json`
 - **Metadata deploy:** `docchain-contracts/deployments/sepolia.json`
-- **Etherscan verify:** ✔ código-fonte publicado no explorer
+- **Etherscan verify:** código-fonte publicado no explorer
 
 ### Critério de conclusão da Fase 1
 ```bash
@@ -99,66 +99,88 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 
 **Objetivo:** API REST completa, funcional, com todos os fluxos testados via Postman/Insomnia.
 
-### 2.1 Configuração base (dia 1)
-- [ ] ConfigModule com validação de env vars (joi ou zod)
-- [ ] PrismaModule global com PrismaService
-- [ ] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
-- [ ] Multer configurado para upload em memória (memoryStorage)
-- [ ] Pasta `/uploads` mapeada como volume
-- [ ] `cookie-parser` middleware registrado
+### 2.1 Configuração base (dia 1) — CONCLUÍDA
+- [x] ConfigModule com validação de env vars (joi)
+- [x] PrismaModule global com PrismaService
+- [x] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
+- [x] Multer configurado para upload em memória (memoryStorage) — via `MulterModule.registerAsync` no `DocumentsModule` (Sessão 4a)
+- [ ] Pasta `/uploads` mapeada como volume — Sessão 2
+- [x] `cookie-parser` middleware registrado
+- [x] `ValidationPipe` global (whitelist + forbidNonWhitelisted + transform)
+- [x] Volume `uploads_data` declarado no `docker-compose.yml` (Sessão 2)
 
-### 2.2 AuthModule (dia 1-2)
-- [ ] `POST /auth/register` — cria usuário com senha hasheada (bcrypt)
-- [ ] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=900`); **não retorna token no body**
-- [ ] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
-- [ ] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
-- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável)
-- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação)
-- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade)
-- [ ] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
-- [ ] Decorador `@CurrentUser()` para extrair usuário do token
+### 2.2 AuthModule (dia 1-2) — parcial
+- [x] `POST /auth/register` — cria usuário com senha hasheada (bcrypt 10 rounds)
+- [x] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; SameSite=Lax; Max-Age=900`); **não retorna token no body**
+- [x] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
+- [x] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
+- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável) — pendente
+- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação) — pendente (depende de StorageService)
+- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade) — pendente (depende de DocumentsModule)
+- [x] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
+- [x] Decorador `@CurrentUser()` para extrair usuário do token
 
-### 2.3 CryptoService (dia 2)
-- [ ] `hashFile(buffer: Buffer): string` — SHA-256 hex
-- [ ] `encrypt(buffer: Buffer): EncryptedPayload` — AES-256-GCM
-- [ ] `decrypt(payload: EncryptedPayload): Buffer`
-- [ ] Testes unitários do CryptoService
+### 2.3 CryptoService (dia 2) — CONCLUÍDA
+- [x] `hashFile(buffer: Buffer): string` — SHA-256 hex
+- [x] `encrypt(buffer: Buffer): EncryptedPayload` — AES-256-GCM
+- [x] `decrypt(payload: EncryptedPayload): Buffer`
+- [x] `serializePayload` / `deserializePayload` (formato `iv|authTag|ciphertext`)
+- [x] Testes unitários do CryptoService — 17 testes, 100% statements
 
-### 2.4 StorageModule (dia 2)
-- [ ] Interface `IStorageService` (permite trocar Local por IPFS)
-- [ ] `LocalStorageService` — salva/recupera arquivo em `/uploads/{hash}.enc`
-- [ ] Testes do StorageService
+### 2.4 StorageModule (dia 2) — CONCLUÍDA
+- [x] Interface `IStorageService` + token DI `STORAGE_SERVICE` (permite trocar Local por IPFS)
+- [x] `LocalStorageService` — save / retrieve / delete / exists em `${UPLOAD_DIR}/{hash}.enc`
+- [x] Validação regex hash SHA-256 (bloqueia path traversal)
+- [x] Testes do StorageService — 13 testes, 100% statements
 
-### 2.5 BlockchainModule (dia 3)
-- [ ] `BlockchainService` com Ethers.js
-- [ ] Conecta ao contrato via ABI + endereço + RPC Sepolia
-- [ ] `registerDocument(hash, storageRef)` — chama contrato + aguarda confirmação
-- [ ] `verifyDocument(hash)` — lê contrato (view function, sem tx)
-- [ ] Tratamento de erros: timeout, gas insuficiente, hash duplicado
-- [ ] Testes de integração com contrato (pode usar fork local do Hardhat)
+### 2.5 BlockchainModule (dia 3) — CONCLUÍDA
+- [x] `BlockchainService` com Ethers.js v6
+- [x] Conecta ao contrato via ABI + endereço + RPC Sepolia (Provider/Signer/Contract in-service)
+- [x] `registerDocument(hash, storageRef)` — chama contrato + aguarda `tx.wait()` (1 confirmação)
+- [x] `verifyDocument(hash)` — lê contrato (view function, sem tx)
+- [x] `isRegistered(hash)` (bônus — pre-check antes de tx)
+- [x] Error mapping: `DocumentAlreadyRegistered → Conflict`, `InvalidHash/EmptyStorageRef → BadRequest`, genérico → `InternalServerError` com Logger
+- [x] Conversão hex → bytes32 + validação regex `^[a-fA-F0-9]{64}$`
+- [x] 17 testes unit (ethers mockado) — 97.87% stmts / 87.5% branch
+- [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 5
 
 ### 2.6 DocumentsModule (dia 3-4)
-- [ ] `POST /documents` — fluxo completo de upload + AuditLog UPLOAD
-- [ ] `GET /documents` — lista documentos do usuário (paginado, `deletedAt IS NULL`)
-- [ ] `GET /documents/:id` — detalhe de um documento
-- [ ] `DELETE /documents/:id` — soft-delete (`deletedAt = now()`) + remove arquivo cifrado + AuditLog DELETE (RF22-24)
-- [ ] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
-- [ ] `GET /verify/public/:hash` — verificação pública + validação regex `^[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
-- [ ] `GET /documents/:id/download` — arquivo descriptografado + AuditLog DOWNLOAD
-- [ ] DTOs com validação (class-validator)
-- [ ] Tratamento de erros com filtros globais
 
-### 2.6b AuditLog + VerificationAttempt (dia 4)
-- [ ] `AuditLogService` — método `log(action, userId?, ...)`
-- [ ] `VerificationAttemptService` — método `record(hash, found, source, ...)`
-- [ ] `RequestContextInterceptor` global — captura ipAddress + userAgent
+**2.6a — Core CRUD (Sessão 4a) — CONCLUÍDA**
+- [x] `POST /documents` — fluxo síncrono hash → encrypt → save → register → CONFIRMED
+- [x] `GET /documents` — paginado + filtro status + `deletedAt IS NULL`
+- [x] `GET /documents/:id` — 404 se não é dono (evita vazar existência)
+- [x] `DELETE /documents/:id` — soft-delete + apaga `.enc` (idempotente)
+- [x] `GET /documents/:id/download` — decrypt + headers (só se status CONFIRMED)
+- [x] `ListDocumentsQueryDto` (class-validator + class-transformer)
+- [x] Rollback: falha em storage/blockchain marca FAILED + apaga file + rethrow
+- [ ] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
 
-### 2.7 Polish e documentação (dia 5)
-- [ ] Swagger configurado (`@nestjs/swagger`)
-- [ ] Health check endpoint `GET /health`
-- [ ] Rate limiting básico (`@nestjs/throttler`)
-- [ ] Logging estruturado
-- [ ] Variáveis de ambiente todas documentadas no `.env.example`
+**2.6b — Verify + Audit (Sessão 4b) — CONCLUÍDA**
+- [x] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
+- [x] `GET /verify/public/:hash` — pública + regex `^(0x)?[a-fA-F0-9]{64}$` antes de RPC (RF19, E07) + VerificationAttempt PUBLIC
+- [x] `AuditLogService.log(action, userId?, ...)` — não bloqueia fluxo (warn no fail)
+- [x] `VerificationAttemptService.record(hash, found, source, ...)` — idem
+- [x] `RequestContextInterceptor` global via `AsyncLocalStorage` (sem dep externa) — captura ip + userAgent + userId
+- [x] Retro-instrumentar endpoints da 4a com AuditLog UPLOAD/DELETE/DOWNLOAD
+- [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 5** (instrumentar AuthController)
+
+### 2.6b AuditLog + VerificationAttempt (dia 4) — CONCLUÍDA (feito na Sessão 4b)
+
+### 2.7 Polish e documentação (dia 5) — CONCLUÍDA
+- [x] Swagger configurado (`@nestjs/swagger`) em `/api/docs` — cookie auth `access_token`
+- [x] Health check endpoint `GET /health` (DB via `SELECT 1` + blockchain via `getBlockNumber` com timeout 5s)
+- [x] Rate limiting global (`@nestjs/throttler`) — 100 req/min padrão, mais restrito em `/auth/login` (10/min), `/auth/register` (5/min), `/verify/public/:hash` (30/min), `/health` skip
+- [x] Logging estruturado — níveis via `LOG_LEVEL` env (verbose|debug|log|warn|error|fatal)
+- [x] Variáveis de ambiente todas documentadas no `.env.example` (+ LOG_LEVEL, THROTTLE_*)
+- [x] Ativar `coverageThreshold` no `jest.config.ts` (75% stmts/branches/lines/funcs)
+- [x] `coveragePathIgnorePatterns` para `*.module.ts`, `main.ts`, `storage.interface.ts`, `dto/`, `decorators/`, `guards/`, `strategies/`, `blockchain/abi/`
+- [x] **BlockchainService — pendências RFC:**
+  - [x] Timeout explícito em `tx.wait()` (RNF02 cap 30s Sepolia) → `RequestTimeoutException`
+  - [x] Balance check do signer antes de tx (warn se < 0.001 ETH)
+  - [ ] Event parser opcional de `DocumentRegistered` — decidido não implementar (2ª call `verifyDocument` já cobre e é mais explícita)
+  - [ ] Teste de integração real contra Sepolia OU Hardhat fork — **deferido pra Fase 4** (integração)
+- [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED — **deferido pra Fase 4** (precisa Sepolia real ou Hardhat fork rodando)
 
 ### Critério de conclusão da Fase 2
 ```
@@ -169,6 +191,203 @@ Via Postman/Insomnia, executar o fluxo completo:
 4. GET /documents → lista com o documento
 5. POST /documents/verify (mesmo arquivo) → hashMatch: true, blockchainConfirmed: true
 6. POST /documents/verify (arquivo alterado) → hashMatch: false
+```
+
+### Fase 2 Sessão 1 concluída (2026-08-18)
+
+- **Prisma schema:** 4 models (User, Document, AuditLog, VerificationAttempt) + 4 enums, migration `20260818043522_init` aplicada
+- **PrismaModule:** global, connect/disconnect no lifecycle
+- **AuthModule:** register / login / logout / me — cookie httpOnly + JWT + bcrypt + JwtStrategy (cookie extractor)
+- **10 testes E2E via curl verdes:** 201/409/400/400/200+cookie/401/200/401/204/401
+- **Ajuste técnico:** downgrade Prisma 7.6 → 6.19 (v7 exige adapter novo, incompatível com nossa spec)
+
+### Fase 2 Sessão 2 concluída (2026-08-24)
+
+- **CryptoModule:** `CryptoService` global — SHA-256 hex + AES-256-GCM (IV 12B, authTag 16B) + serialize/deserialize (`iv|authTag|ciphertext`)
+- **StorageModule:** interface `IStorageService` + token `STORAGE_SERVICE` (troca Local↔IPFS futura) + `LocalStorageService` (save/retrieve/delete/exists em `${UPLOAD_DIR}/{hash}.enc`)
+- **Segurança:** validação regex `^[a-f0-9]{64}$` no `LocalStorageService` bloqueia path traversal
+- **Volume Docker:** `uploads_data` declarado no `docker-compose.yml`
+- **Backfill Sessão 1:** `auth.service.spec.ts`, `auth.controller.spec.ts`, `jwt.strategy.spec.ts`, `prisma.service.spec.ts`, `current-user.decorator.spec.ts`, `jwt-auth.guard.spec.ts` — décidido tirar o débito antes da Sessão 3
+- **Testes:** 64 unitários verdes — cobertura global **79.33% stmts / 83% branch / 94.73% funcs / 81.04% lines** (bate meta 75% do TESTING_STRATEGY)
+- **Ajustes técnicos:**
+  - `serializePayload` retorna Buffer único (header fixo 28B)
+  - `bcrypt` mockado via `jest.mock` (não `spyOn`: bcrypt.compare é readonly export)
+  - `cookieExtractor` e `extractCurrentUser` extraídos como exports pra permitir teste unitário
+- **Débito remanescente (Sessão 5):** ativar `coverageThreshold` + configurar `coveragePathIgnorePatterns`
+
+### Fase 2 Sessão 3 concluída (2026-08-24)
+
+- **BlockchainModule (global):** `BlockchainService` com ethers.js v6
+- **Endpoints do contrato usados:** `registerDocument` / `verifyDocument` / `isRegistered` (os 3 do ABI que a API precisa)
+- **Endpoints não usados (proposital):** `owner()`, `totalDocuments()` — governança e métrica admin, fora do escopo TCC
+- **Injeção:** Provider/Signer/Contract construídos in-service via `ConfigService` (RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS)
+- **Error mapping:** `DocumentAlreadyRegistered → ConflictException` (RF10), `InvalidHash`/`EmptyStorageRef → BadRequestException`, genérico → `InternalServerErrorException` com `Logger`
+- **Bytes32:** aceita hash com/sem prefix `0x`, normaliza lowercase, valida regex antes de chamar contrato
+- **Testes:** 17 unit verdes com `ethers` mockado — cobertura 97.87% stmts / 87.5% branch / 100% funcs
+- **Suite total:** 81 testes verdes (10 suites) — cobertura global mantém acima de 75%
+- **Ajustes técnicos:**
+  - Mock do módulo `ethers` via `jest.mock` — expõe `__contractInstance` compartilhado
+  - Tests `it.each` cobrem os 3 envs obrigatórios (RPC/PRIVATE_KEY/ADDRESS)
+
+### Fase 2 Sessão 4a concluída (2026-08-24)
+
+- **DocumentsModule:** `DocumentsService` + `DocumentsController` + `ListDocumentsQueryDto`
+- **Multer:** `MulterModule.registerAsync` com `memoryStorage()` + limite `MAX_FILE_SIZE_MB` (default 50)
+- **Fluxo POST /documents (síncrono, RNF02 <30s):**
+  1. `crypto.hashFile(buffer)` → SHA-256
+  2. Pré-check duplicata em Prisma (`Document.hash @unique`) — reject 409 antes de gastar gas
+  3. Cria row `status=PROCESSING`
+  4. `crypto.encrypt` + `serializePayload` → 1 arquivo `.enc` (iv|authTag|ciphertext)
+  5. `storage.save(hash, buffer)` → storageRef
+  6. Grava iv/authTag em base64 no row
+  7. `blockchain.registerDocument(hash, storageRef)` + `tx.wait()`
+  8. Row → `CONFIRMED` com txHash, blockNumber, walletAddress, confirmedAt
+  9. Falha em qualquer step: rollback (delete file idempotente) + `status=FAILED` + errorMessage + rethrow
+- **Ownership:** `findFirst({ id, userId, deletedAt: null })` — 404 unificado (não vaza existência)
+- **Soft-delete:** RF22-24 — `deletedAt = now()` + apaga arquivo, on-chain permanece imutável
+- **Download:** só se `status=CONFIRMED` — retrieve → deserialize → decrypt → send com `Content-Disposition` encoded
+- **BlockchainService:** exposto `signerAddress` (via `Wallet.address`) — grava em `Document.walletAddress`
+- **Testes:** 27 novos (17 service + 10 controller) — coverage `documents.service.ts` 100% stmts / 78.94% branch
+- **Suite total:** 108 testes verdes (12 suites) — global 82.61% stmts / 76.92% branch / 91.66% funcs / 84.65% lines
+- **Ajustes técnicos:**
+  - `import type` obrigatório em `AuthenticatedUser` e `IStorageService` (isolatedModules + emitDecoratorMetadata)
+  - `ParseUUIDPipe` no `:id` bloqueia UUID inválido antes do service
+
+### Fase 2 Sessão 4b concluída (2026-08-24)
+
+- **CommonModule (global):** `RequestContextService` (AsyncLocalStorage built-in) + `RequestContextInterceptor` registrado via `APP_INTERCEPTOR` — captura ip + userAgent + userId em todo request
+  - Zero dependência externa (sem `nestjs-cls` etc.)
+  - `runObservable()` propaga contexto pra cadeia RxJS
+- **AuditModule (global):** `AuditLogService.log({ action, userId?, resourceType?, resourceId?, metadata? })`
+  - Lê ip/userAgent/userId do contexto; explícito sobrescreve (`null` explícito = ação anônima)
+  - `try/catch` interno — falha ao gravar log não derruba operação principal (warn log)
+- **VerificationModule:** `VerificationAttemptService.record()` mesma pattern do audit
+- **VerifyController:**
+  - `POST /documents/verify` (JWT) → PRIVATE attempt com userId
+  - `GET /verify/public/:hash` (sem auth) → PUBLIC attempt com userId=null
+  - Validação regex `^(0x)?[a-fA-F0-9]{64}$` via DTO antes de chegar ao service
+- **DocumentsService retro-instrumentado:** UPLOAD (pós-CONFIRMED), DELETE (pós-soft-delete), DOWNLOAD (pós-decrypt) — metadata `{ hash, fileName, txHash?, blockNumber? }`
+- **Testes:** 19 novos (5 request-ctx + 2 interceptor + 4 audit + 4 verification-attempt + 3 verify.ctrl + 3 updates DocumentsService) — suite total **127 verdes** (17 suites)
+- **Coverage global:** 81.89% stmts / 79.53% branch / 93.33% funcs / 84.13% lines
+- **Ajustes técnicos:**
+  - `opts.userId !== undefined` (não `??`) pra permitir `null` explícito
+  - `VerifyController` sem prefix (`@Controller()`) porque endpoints ficam em paths diferentes (`documents/verify` e `verify/public/:hash`)
+- **Débito Sessão 5:** AuditLog para LOGIN/LOGOUT/REGISTER (instrumentar AuthController)
+
+### Fase 2 Sessão 5 concluída (2026-08-25)
+
+- **Swagger:** `SwaggerModule` em `/api/docs` — cookie auth `access_token`, tags `auth`/`documents`/`verification`/`health`, decorators `@ApiProperty` nos DTOs, `@ApiConsumes('multipart/form-data')` no upload
+- **HealthModule:** `HealthController` + `HealthService` — checa Prisma (`$queryRaw`SELECT 1``) + `BlockchainService.getBlockNumber()` (timeout 5s), retorna `200 ok` ou `503 degraded` com detail por check, `@SkipThrottle()`
+- **Throttler global:** `APP_GUARD` = `ThrottlerGuard`; TTL/limit via env (`THROTTLE_TTL_SECONDS`, `THROTTLE_LIMIT`); overrides `@Throttle` em endpoints sensíveis
+- **BlockchainService hardening:**
+  - `TX_WAIT_TIMEOUT_MS = 30_000` (RNF02) + método `withTimeout()` genérico → `RequestTimeoutException`
+  - `assertSufficientBalance()` pré-tx — warn se saldo < 0.001 ETH (não bloqueia, RPC pode falhar)
+  - `getBlockNumber()` público pro health check (com mesmo timeout wrapper)
+- **AuditLog auth:** `AuthService.register/login` grava REGISTER/LOGIN success/failure com metadata (`success`, `reason`); `AuthController.logout` grava LOGOUT
+- **Logging estruturado:** `LOG_LEVEL` env aplicado via `resolveLogLevels()` em `bootstrap` (`main.ts`)
+- **Jest config extraído** de `package.json` → `jest.config.ts`; `coverageThreshold` 75% ativo; `coveragePathIgnorePatterns` exclui módulos, DTOs, decorators, guards, strategies, ABIs
+- **`.env.example`:** adicionados `LOG_LEVEL`, `THROTTLE_TTL_SECONDS`, `THROTTLE_LIMIT`; Joi validation atualizada
+- **Testes:** 14 novos (4 health.service + 1 health.ctrl + 4 auth.service audit + 1 auth.ctrl logout + 2 blockchain balance + 1 blockchain getBlockNumber + 1 blockchain timeout) — suite total **141 verdes** (19 suites)
+- **Coverage global (com ignorePatterns):** **99.53% stmts / 80.07% branch / 100% funcs / 99.74% lines** — bate threshold 75%
+- **Ajustes técnicos:**
+  - Fake timers + `advanceTimersByTimeAsync` + handler `.catch` antecipado pra testar timeout tx.wait sem `PromiseRejectionHandledWarning`
+  - `AuditLogService` já era global — só injetar em `AuthService`/`AuthController`
+  - `SkipThrottle` no health evita 429 durante monitoring
+- **Deferido Fase 4:** E2E completo POST /documents → CONFIRMED (precisa Sepolia/Hardhat fork), event parser DocumentRegistered (2ª call verifyDocument já cobre)
+
+---
+
+## Fase 2 — Extensões (pós-Sessão 5)
+
+Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend com dois casos de uso do mundo real: compartilhamento formal via email e versionamento de documentos que passam por assinatura/edição.
+
+### 2.8 SharingModule — Compartilhamento por email
+
+**Objetivo:** dono do documento envia o arquivo original + comprovante em PDF para um destinatário por email, permitindo verificação independente sem depender do frontend do DocChain.
+
+**Motivação:** caso de uso jurídico/negocial. Rafael registra contrato hoje e precisa provar autenticidade ao juiz daqui a 5 anos. Envia via DocChain, destinatário recebe doc + comprovante com QR + hash + tx — verifica offline (recalcula SHA-256) ou online (QR aponta pra `/verify/public/:hash`).
+
+**Escopo:**
+- [ ] `MailerModule` — `MailerService` usando `nodemailer` + provider SMTP (Resend/SendGrid — free tier suficiente pro TCC)
+- [ ] `PdfModule` — `PdfService` que gera comprovante 1-página com `pdfmake` + QR via `qrcode`
+- [ ] `SharingModule` — `SharingService.share(userId, docId, email, message?)`
+  1. Verifica ownership do documento (`Document.userId === currentUser.id`)
+  2. Bloqueia se `status !== CONFIRMED` (sem prova ainda)
+  3. Bloqueia se `deletedAt IS NOT NULL`
+  4. `storage.retrieve(hash)` + `crypto.deserialize` + `crypto.decrypt` → buffer original
+  5. `pdf.generateComprovante(document)` → buffer PDF
+  6. `mailer.send({ to, attachments: [original, comprovante], template })`
+  7. Cria row `DocumentShare` (rastreio)
+  8. `AuditLog.log(SHARE)` com destinatário no metadata
+- [ ] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
+- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain)
+- [ ] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
+- [ ] Novo enum `AuditAction.SHARE`
+- [ ] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `MAIL_PROVIDER` (Joi validation)
+- [ ] Specs: sharing.service.spec.ts, mailer.service.spec.ts, pdf.service.spec.ts, sharing.controller.spec.ts (nodemailer mockado com `jest.mock`)
+
+**Comprovante PDF — campos obrigatórios:**
+- Identificação: fileName, mimeType, fileSize, usuário emissor (nome+email), timestamp registro
+- Impressão digital: SHA-256 formatado em 2 linhas de 32 chars
+- On-chain: rede + chainId, endereço do contrato, txHash completo, blockNumber, timestamp on-chain, walletAddress DocChain
+- Verificação independente: passo-a-passo `sha256sum`/`certutil hashfile`, QR pra `/verify/public/:hash`, link Etherscan
+- Rodapé: data emissão do comprovante, versão do template (`v1.0`)
+
+**Testes:**
+- Ownership: outro user tenta compartilhar → 404
+- Status !== CONFIRMED → 400
+- Deleted → 404
+- Email inválido no DTO → 400 (class-validator)
+- Rate limit → 429
+- Mailer fail → 502 (não corrompe estado, não cria DocumentShare row)
+
+### 2.9 Versionamento de documentos
+
+**Objetivo:** permitir registrar uma nova versão de documento existente (ex: original sem assinatura → assinado → com contra-assinaturas), mantendo cronologia auditável on-chain.
+
+**Motivação:** hash SHA-256 é determinístico byte-a-byte. Se o documento é editado/assinado, o hash muda completamente e o registro on-chain original vira "prova da versão anterior". Cada versão precisa de novo registro on-chain independente, mas ligado à versão-mãe no banco off-chain.
+
+**Escopo:**
+- [ ] Migration Prisma: coluna `previousDocumentId String? @map("previous_document_id")` em `Document` (self-reference nullable)
+- [ ] Relação `previousDocument` / `nextVersions[]` no schema Prisma (index em `previousDocumentId`)
+- [ ] `DocumentsService.createVersion(userId, previousDocId, file)`
+  1. Verifica ownership do documento-mãe
+  2. Bloqueia se `deletedAt IS NOT NULL` na mãe (não versiona doc excluído)
+  3. Executa fluxo idêntico ao `create()` (hash → encrypt → save → registerOnChain → CONFIRMED)
+  4. Row nova salva `previousDocumentId` apontando pra mãe
+  5. `AuditLog.log(UPLOAD)` com metadata `{ versionOf: previousDocId }`
+- [ ] `POST /documents/:id/versions` — body `multipart/form-data` (file), 201 com nova versão completa
+- [ ] `GET /documents/:id/versions` — retorna timeline ordenada (raiz → folha) com N versões, cada uma com dados on-chain próprios
+- [ ] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes)
+- [ ] Regras:
+  - Qualquer versão pode originar nova versão (permite fork/branch — ex: v1 pode ter v2a e v2b em paralelo, caso o mesmo documento seja assinado por partes diferentes)
+  - Delete em qualquer versão só afeta aquela versão (soft-delete individual — não propaga pra ancestrais nem descendentes)
+  - Documento-mãe soft-deleted bloqueia criação de nova versão (`404`) mas não invalida versões pré-existentes
+- [ ] Specs: documents.service.spec.ts (createVersion + listVersions), documents.controller.spec.ts (novo endpoint)
+
+**Timeline pro frontend futuro:**
+```
+v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
+  └─ v2 (assinado)   → hash def... → tx2 (bloco 2000, 26/08 10:15)
+       └─ v3 (final) → hash ghi... → tx3 (bloco 3000, 27/08 14:00)
+```
+
+**Testes:**
+- Cria versão a partir de doc CONFIRMED → nova row com previousDocumentId, hash único on-chain
+- Tenta versionar doc de outro user → 404
+- Versionar doc soft-deleted → 404
+- Upload duplicado (hash já existe) → 409 (mesma regra do create)
+- `GET /versions` retorna cronologia correta
+- Delete de v2 não afeta v1 nem v3
+
+### Critério de conclusão da Fase 2 estendida
+```
+1. POST /documents (v1) → 201 CONFIRMED
+2. POST /documents/:v1id/versions com arquivo modificado → 201 CONFIRMED com previousDocumentId=v1id
+3. GET /documents/:v1id/versions → array [v1, v2]
+4. POST /documents/:v1id/share { email } → 202, email chega com 2 anexos (original + comprovante.pdf)
+5. Destinatário abre PDF → QR aponta pra /verify/public/:hash → 200 exists:true
+6. Suíte total ≥ 170 testes verdes, coverage global ≥ 75%
 ```
 
 ---
@@ -264,11 +483,12 @@ Executar o fluxo completo via browser:
 
 | Fase | Tempo | Status |
 |---|---|---|
-| Fase 0 — Setup | 1 dia | ✅ Concluída |
-| Fase 1 — Smart Contract | 2 dias | ⬜ Não iniciado |
-| Fase 2 — Backend | 5 dias | ⬜ Não iniciado |
-| Fase 3 — Frontend | 4 dias | ⬜ Não iniciado |
-| Fase 4 — Integração | 2 dias | ⬜ Não iniciado |
-| **Total** | **~14 dias úteis** | |
+| Fase 0 — Setup | 1 dia | Concluída |
+| Fase 1 — Smart Contract | 2 dias | Concluída |
+| Fase 2 — Backend | 5 dias | Concluída |
+| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Não iniciado |
+| Fase 3 — Frontend | 4 dias | Não iniciado |
+| Fase 4 — Integração | 2 dias | Não iniciado |
+| **Total** | **~16 dias úteis** | |
 
 > Com sessões focadas de Claude Code, cada fase pode ser comprimida. O backend é a fase mais densa — reserve mais tempo se for a primeira vez com NestJS.
