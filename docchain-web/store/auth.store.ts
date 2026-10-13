@@ -14,6 +14,8 @@ interface AuthState {
   register: (input: RegisterInput) => Promise<AuthenticatedUser>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<AuthenticatedUser | null>;
+  setUser: (user: AuthenticatedUser) => void;
+  clearSession: () => void;
   reset: () => void;
 }
 
@@ -68,6 +70,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       return null;
     }
   },
+
+  setUser: (user) => set({ user }),
+
+  clearSession: () => set({ user: null, isHydrated: true }),
 
   reset: () => set({ user: null, isHydrated: false, isLoading: false }),
 }));

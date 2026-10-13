@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { LayoutDashboard, LogOut, Menu, ShieldCheck, Upload, X } from 'lucide-react';
+import { CircleUser, LayoutDashboard, LogOut, Menu, ShieldCheck, Upload, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { extractErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/upload', label: 'Novo upload', icon: Upload },
   { href: '/verify', label: 'Verificar', icon: ShieldCheck },
+  { href: '/conta', label: 'Minha conta', icon: CircleUser },
 ];
 
 function initials(name: string | null, email: string): string {
@@ -137,7 +138,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           {user && (
             <div className="flex items-center gap-3 md:gap-4">
-              <div className="flex items-center gap-3">
+              <Link href="/conta" className="flex items-center gap-3" aria-label="Minha conta">
                 <div className="hidden text-right sm:block">
                   <div className="text-sm font-medium text-foreground">{user.name ?? user.email}</div>
                   {user.name && <div className="text-xs text-muted-foreground">{user.email}</div>}
@@ -145,7 +146,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                   {initials(user.name, user.email)}
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={onLogout}
                 title="Sair"

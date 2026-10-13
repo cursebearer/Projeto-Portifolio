@@ -190,11 +190,11 @@ export default function RegisterPage() {
           />
           <span>
             Li e aceito os{' '}
-            <Link href="#" className="text-primary hover:underline">
+            <Link href="/termos" target="_blank" className="text-primary hover:underline">
               Termos de Uso
             </Link>{' '}
             e a{' '}
-            <Link href="#" className="text-primary hover:underline">
+            <Link href="/privacidade" target="_blank" className="text-primary hover:underline">
               Política de Privacidade
             </Link>
           </span>

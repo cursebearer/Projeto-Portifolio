@@ -114,9 +114,9 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] `POST /auth/login` — valida credenciais, emite cookie httpOnly (`Set-Cookie: access_token=<jwt>; HttpOnly; SameSite=Lax; Max-Age=900`); **não retorna token no body**
 - [x] `POST /auth/logout` — `Set-Cookie: access_token=; Max-Age=0` (RF04)
 - [x] `GET /auth/me` — retorna { id, email, name, createdAt } (frontend hidrata Zustand; LGPD acesso)
-- [ ] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável) — pendente
-- [ ] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação) — pendente (depende de StorageService)
-- [ ] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade) — pendente (depende de DocumentsModule)
+- [x] `PATCH /auth/me` — atualiza nome (LGPD correção; email imutável) — feito na Fase 3.9
+- [x] `DELETE /auth/me` — elimina conta + arquivos cifrados + Documents (cascade) + anonimiza AuditLog/VerificationAttempt (LGPD eliminação) — feito na Fase 3.9 (exige senha; anonimiza também logs com o e-mail no metadata)
+- [x] `GET /auth/me/export` — JSON User + Documents (LGPD portabilidade) — feito na Fase 3.9 (inclui documentos excluídos e compartilhamentos)
 - [x] JwtStrategy com `cookieExtractor` do Passport + JwtAuthGuard
 - [x] Decorador `@CurrentUser()` para extrair usuário do token
 
@@ -459,10 +459,10 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
 - [x] Header e footer públicos compartilhados com `/verify`; `AuthCard` fluido (corrige overflow em 360px) e logo leva à home
 - [x] Sem depoimentos ou métricas fictícias — só o que o produto faz de fato
 
-### 3.9 Conta e LGPD
-- [ ] Páginas `/privacidade` e `/termos`
-- [ ] Página `/conta`: editar nome, exportar dados, excluir conta
-- [ ] Backend: `PATCH /auth/me`, `GET /auth/me/export`, `DELETE /auth/me` (RFC 6.4)
+### 3.9 Conta e LGPD — CONCLUÍDA
+- [x] Páginas `/privacidade` e `/termos`
+- [x] Página `/conta`: editar nome, exportar dados, excluir conta
+- [x] Backend: `PATCH /auth/me`, `GET /auth/me/export`, `DELETE /auth/me` (RFC 6.4)
 
 ### 3.10 Ajustes de UX
 - [ ] Aviso/renovação de sessão (JWT de 15 min)
@@ -538,7 +538,7 @@ Executar o fluxo completo via browser:
 - [ ] GitHub Wiki (requisitos, casos de uso, C4, instruções de deploy)
 
 ### Pendências herdadas (RFC 1.2 promete, código não tem)
-- [ ] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4 — previsto em M2)
+- [x] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4) — feito na Fase 3.9
 - [ ] `AllExceptionsFilter` global ocultando stack trace em produção (RFC 6.1 A05, E06)
 - [ ] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2)
 - [ ] Re-registro de documento `FAILED` (RFC RN07 + E01) — hoje o rollback apaga o arquivo e não há endpoint de retry; decidir: implementar ou ajustar a RFC

@@ -7,7 +7,11 @@ export function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/register');
   const { pathname } = request.nextUrl;
-  const isPublicPage = pathname === '/' || pathname.startsWith('/verify');
+  const isPublicPage =
+    pathname === '/' ||
+    pathname === '/privacidade' ||
+    pathname === '/termos' ||
+    pathname.startsWith('/verify');
 
   if (!token && !isAuthPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url));
