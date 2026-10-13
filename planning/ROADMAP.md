@@ -437,12 +437,14 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
   - Compartilhar por email (dialog → `POST /documents/:id/share`) e versões (lista + nova versão → `POST /documents/:id/versions`)
   - Linha do tempo usa datas do documento (não há endpoint de audit por documento)
 
-### 3.6 Verificação pública (dia 3-4)
-- [ ] Página `/verify` — verificação sem autenticação
+### 3.6 Verificação pública (dia 3-4) — CONCLUÍDA
+- [x] Página `/verify` — verificação sem autenticação
   - Campo para colar hash SHA-256
   - OU upload de arquivo para recalcular hash
   - Consulta blockchain e retorna resultado público
   - Útil para terceiros verificarem autenticidade
+  - Hash do arquivo calculado no navegador (RF17) — o arquivo não é enviado
+  - Rota `/verify/[hash]` verifica automaticamente; QR code do comprovante PDF aponta para ela via `VERIFY_PUBLIC_BASE_URL` (antes apontava para domínio externo `docchain.dev`)
 
 ### 3.7 Polish (dia 4)
 - [ ] Loading states em todas as operações assíncronas

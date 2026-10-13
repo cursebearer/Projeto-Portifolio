@@ -11,7 +11,7 @@ describe('PdfService', () => {
       get: jest.fn((key: string, def?: unknown) => {
         const values: Record<string, unknown> = {
           NETWORK: 'sepolia',
-          VERIFY_PUBLIC_BASE_URL: 'https://docchain.dev/verify/public',
+          VERIFY_PUBLIC_BASE_URL: 'http://localhost:3001/verify',
         };
         return values[key] ?? def;
       }),

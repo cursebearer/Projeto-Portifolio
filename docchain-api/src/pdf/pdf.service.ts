@@ -16,7 +16,7 @@ export class PdfService {
     const network = config.get<string>('NETWORK', 'sepolia');
     this.verifyBaseUrl =
       config.get<string>('VERIFY_PUBLIC_BASE_URL') ??
-      'https://docchain.dev/verify/public';
+      'http://localhost:3001/verify';
     this.etherscanBaseUrl =
       network === 'mainnet'
         ? 'https://etherscan.io/tx'

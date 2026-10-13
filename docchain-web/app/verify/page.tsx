@@ -1,3 +1,5 @@
+import { VerifyFrame } from '@/components/verify/VerifyFrame';
+
 export default function VerifyPage() {
-  return <div>Verify</div>;
+  return <VerifyFrame />;
 }
