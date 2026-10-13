@@ -488,8 +488,9 @@ Executar o fluxo completo via browser:
 ### 4.1 Integração end-to-end (dia 1)
 - [ ] Docker Compose com todos os serviços (postgres + api + web)
 - [ ] Variáveis de ambiente de produção configuradas
-- [ ] Seed de dados para demonstração
+- [ ] Seed de dados para demonstração (decidir: uploads reais na Sepolia ou só dados locais)
 - [ ] Testar fluxo completo no ambiente containerizado
+- [ ] E2E do fluxo POST /documents → CONFIRMED com Hardhat local (sem gastar ETH)
 
 ### 4.2 Documentação do TCC (dia 2)
 - [ ] README de cada repositório com instruções de setup
@@ -510,7 +511,7 @@ Executar o fluxo completo via browser:
   - API: `prisma generate` + lint + `nest build` + `jest --coverage` (threshold 75%) + artifact `lcov.info`
   - Web: ESLint 9 (`eslint .`) + `next build`
   - Audit: `npm audit --omit=dev --audit-level=high` nos 3 projetos (bloqueante)
-- [x] Dependabot (`.github/dependabot.yml`) — npm nos 3 projetos + github-actions (RFC 6.1 A06)
+- [x] Dependabot (`.github/dependabot.yml`) — npm nos 3 projetos + github-actions (RFC 6.1 A06); mensal, 1 PR agrupado por ecossistema, majors ignorados
 - [x] Deps high/critical zeradas: API (bcrypt 6, multer 2, overrides deepmerge-ts/js-yaml) e web (Next 16, React 19, Tailwind 4); audit bloqueante
 - [ ] `@nestjs/swagger` 12 exige NestJS 12 — migrar Nest 11 -> 12 após a entrega (hoje js-yaml corrigido via override)
 - [x] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
@@ -530,6 +531,8 @@ Executar o fluxo completo via browser:
 ### 5.4 Hospedagem pública
 - [ ] API + PostgreSQL + web em nuvem (AWS/GCP/Azure/Hostinger) com URL pública estável
 - [ ] Variáveis de produção e segredos configurados no provedor
+- [ ] `VERIFY_PUBLIC_BASE_URL` apontando para a URL pública (link e QR do comprovante)
+- [ ] Domínio verificado no Resend (hoje só entrega para o email da conta Resend) e `SMTP_FROM` com esse domínio
 
 ### 5.5 Monitoramento
 - [ ] Ferramenta de observabilidade (NewRelic/Datadog/Prometheus+Grafana) apontando para `/health` e métricas da API
@@ -557,6 +560,26 @@ Executar o fluxo completo via browser:
 - [ ] 6.4 LGPD: provedor SMTP (Resend) passa a ser operador que recebe email do destinatário — atualizar "Informação sobre compartilhamento"; marcar status real dos endpoints LGPD
 - [ ] 7.1 Marcos: datas de M3 (06/09) e M4 (04/10) estouradas; M0 cita "CI básico" que só foi criado agora; "deploy preview na Vercel" — replanejar até 30/11
 - [ ] Incluir requisitos do PAC VIII (SonarCloud, monitoramento, hospedagem, testes web 25%)
+
+### Próximos passos (ordem combinada em 2026-10-13, deploy por último)
+1. Docker Compose unificado (postgres + api + web + volume de uploads) — 4.1
+2. Seed de demonstração — 4.1
+3. Monitoramento Prometheus + Grafana no compose, com dashboard — 5.5
+4. E2E com Hardhat local — 4.1
+5. Pendências herdadas: `AllExceptionsFilter`, retry/backoff + RPC fallback, bcrypt 12, filtro `includeVersions` (2.9), teste de integração do contrato (2.5)
+6. Lint da API zerado e bloqueante — 5.1
+7. Documentação: NatSpec, READMEs, diagrama de arquitetura — 4.2
+8. GitHub Wiki — 5.6
+9. Deploy (hospedagem, CD, variáveis de produção, cookie/domínio, Resend) — 5.4
+
+Depende do Rafael (fora do código):
+- [ ] SonarCloud: login com GitHub e gerar token
+- [ ] Branch protection na `main` e ativar a Wiki nas configurações do repo
+- [ ] Criar `docchain@gmail.com` (já referenciado em `lib/site.ts`)
+- [ ] Apagar `docchain-api/.env.bak`
+- [ ] Parceiro externo do PAC (NP3)
+- [ ] Vídeo demo de 3 min e slides (após compose + seed)
+- [ ] RFC 1.3 (quando decidir)
 
 ---
 
