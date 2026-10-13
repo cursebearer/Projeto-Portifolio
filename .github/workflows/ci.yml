@@ -79,8 +79,6 @@ jobs:
   audit:
     name: npm audit (${{ matrix.project }})
     runs-on: ubuntu-latest
-    # TODO: tornar bloqueante apos atualizar deps com vulnerabilidades high/critical
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
