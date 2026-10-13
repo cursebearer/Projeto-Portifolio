@@ -8,8 +8,9 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
-  title: 'DocChain',
-  description: 'Registro documental com prova on-chain',
+  title: { default: 'DocChain', template: '%s · DocChain' },
+  description:
+    'Registro documental com prova de integridade na blockchain: hash SHA-256, criptografia AES-256-GCM e verificação pública.',
 };
 
 export default function RootLayout({

@@ -17,6 +17,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: ['app/**', 'components/**', 'lib/**', 'store/**'],
       exclude: ['components/ui/**', '**/*.test.{ts,tsx}'],
+      thresholds: { statements: 50, branches: 50, functions: 50, lines: 50 },
     },
   },
 });
