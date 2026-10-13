@@ -320,7 +320,7 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
   7. Cria row `DocumentShare` (rastreio)
   8. `AuditLog.log(SHARE)` com destinatário no metadata
 - [x] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
-- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain) — implementado como 20/min; ajustar para 5/hora
+- [x] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain) — `SharingService.assertRateLimit` via `SHARE_RATE_LIMIT_PER_HOUR` + throttle 20/min no endpoint
 - [x] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
 - [x] Novo enum `AuditAction.SHARE`
 - [x] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (Joi validation) — `MAIL_PROVIDER` descartado (SMTP genérico já cobre Resend/SendGrid)
@@ -417,8 +417,8 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
   - Botão de upload rápido
 - [x] Cards de estatísticas: total documentos, confirmados, pendentes
 
-### 3.4 Upload (dia 2)
-- [ ] Página `/upload`
+### 3.4 Upload (dia 2) — CONCLUÍDA
+- [x] Página `/upload`
   - Dropzone para seleção de arquivo
   - Preview de nome e tamanho
   - Feedback de progresso durante processamento
@@ -498,9 +498,9 @@ Executar o fluxo completo via browser:
 - [ ] CD: deploy automático após merge na `main`
 
 ### 5.2 Testes frontend (mínimo 25%)
-- [ ] Configurar Jest/Vitest + Testing Library no `docchain-web`
+- [x] Vitest 5 + Testing Library + jsdom no `docchain-web` (`npm run test`, `test:cov`); exige Node 22+, CI e Dockerfile da API subiram para Node 24
 - [ ] Specs de componentes e store (auth, dashboard, upload, verify)
-- [ ] Incluir step de testes + coverage do web no CI
+- [x] Incluir step de testes + coverage do web no CI
 
 ### 5.3 Análise estática
 - [ ] SonarCloud conectado ao repo (consome `lcov.info` da API e do web)

@@ -12,12 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { StatusBadge } from '@/components/documents/StatusBadge';
+import { truncateHash } from '@/lib/format';
 import type { DocumentDto } from '@/types/document';
-
-function truncateHash(hash: string): string {
-  const clean = hash.startsWith('0x') ? hash : `0x${hash}`;
-  return `${clean.slice(0, 6)}...${clean.slice(-4)}`;
-}
 
 function formatRelative(date: string): string {
   const now = Date.now();
