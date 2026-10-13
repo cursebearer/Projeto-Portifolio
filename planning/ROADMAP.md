@@ -446,12 +446,12 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
   - Hash do arquivo calculado no navegador (RF17) — o arquivo não é enviado
   - Rota `/verify/[hash]` verifica automaticamente; QR code do comprovante PDF aponta para ela via `VERIFY_PUBLIC_BASE_URL` (antes apontava para domínio externo `docchain.dev`)
 
-### 3.7 Polish (dia 4)
-- [ ] Loading states em todas as operações assíncronas
-- [ ] Error handling com toasts (sonner ou react-hot-toast)
-- [ ] Responsividade mobile
-- [ ] Empty states (sem documentos ainda)
-- [ ] Favicon e metadados básicos
+### 3.7 Polish (dia 4) — CONCLUÍDA
+- [x] Loading states em todas as operações assíncronas
+- [x] Error handling com toasts (sonner ou react-hot-toast)
+- [x] Responsividade mobile — Shell com sidebar a partir de 768px e menu sanduíche abaixo; dashboard empilha cards/filtros; tabela com scroll horizontal (RNF15)
+- [x] Empty states (sem documentos ainda)
+- [x] Favicon e metadados básicos — `app/icon.svg`, título por rota via `metadata` (template "%s · DocChain"), páginas 404 e de erro
 
 ### Critério de conclusão da Fase 3
 ```
@@ -504,7 +504,7 @@ Executar o fluxo completo via browser:
 
 ### 5.2 Testes frontend (mínimo 25%)
 - [x] Vitest 5 + Testing Library + jsdom no `docchain-web` (`npm run test`, `test:cov`); exige Node 22+, CI e Dockerfile da API subiram para Node 24
-- [ ] Specs de componentes e store (auth, dashboard, upload, verify)
+- [x] Specs de componentes e páginas (dashboard, shell, upload, detalhe, verify) — 52 testes, cobertura 57%, threshold 50% no `vitest.config.mts`
 - [x] Incluir step de testes + coverage do web no CI
 
 ### 5.3 Análise estática
@@ -552,7 +552,7 @@ Executar o fluxo completo via browser:
 | Fase 1 — Smart Contract | 2 dias | Concluída |
 | Fase 2 — Backend | 5 dias | Concluída |
 | Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Concluída (falta `includeVersions` e ajuste do rate limit) |
-| Fase 3 — Frontend | 4 dias | Em andamento (3.1–3.3 concluídas) |
+| Fase 3 — Frontend | 4 dias | Concluída (3.1–3.7) |
 | Fase 4 — Integração | 2 dias | Não iniciado |
 | Fase 5 — Requisitos PAC VIII | 4 dias | Em andamento (CI criado) |
 | **Total** | **~20 dias úteis** | |

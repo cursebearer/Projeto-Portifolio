@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-7 flex items-start justify-between">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="mb-1.5 text-[26px] font-semibold tracking-tight text-foreground">
             Meus Documentos
@@ -100,7 +100,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Total de Documentos"
           value={stats?.total ?? '—'}
@@ -117,10 +117,10 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mb-4 flex gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <Input
-          placeholder="🔍  Buscar por nome ou hash..."
-          className="max-w-sm"
+          placeholder="Buscar por nome ou hash..."
+          className="sm:max-w-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -131,7 +131,8 @@ export default function DashboardPage() {
             setPage(1);
             setStatusFilter(e.target.value as '' | DocumentStatus);
           }}
-          className="max-w-[220px] rounded-md border border-input bg-secondary px-3.5 py-2.5 text-sm text-foreground outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/15"
+          aria-label="Filtrar por status"
+          className="w-full rounded-md sm:max-w-[220px] border border-input bg-secondary px-3.5 py-2.5 text-sm text-foreground outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -147,7 +148,22 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <DocumentTable documents={filteredDocuments} />
+          {total === 0 && !statusFilter ? (
+            <div className="rounded-xl border border-border bg-card p-12 text-center">
+              <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground opacity-40" />
+              <p className="font-medium text-foreground">Você ainda não registrou nenhum documento</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Envie um arquivo para gerar a prova de integridade na blockchain.
+              </p>
+              <Button asChild className="mt-5">
+                <Link href="/upload" className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Registrar primeiro documento
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <DocumentTable documents={filteredDocuments} />
+          )}
           {total > PAGE_SIZE && (
             <Pagination
               page={page}

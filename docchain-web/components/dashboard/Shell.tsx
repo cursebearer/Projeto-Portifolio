@@ -2,15 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  ShieldCheck,
-  Upload,
-} from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, ShieldCheck, Upload, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { extractErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -18,7 +12,6 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/upload', label: 'Novo upload', icon: Upload },
-  { href: '/documents', label: 'Documentos', icon: FileText },
   { href: '/verify', label: 'Verificar', icon: ShieldCheck },
 ];
 
@@ -30,6 +23,46 @@ function initials(name: string | null, email: string): string {
   return (first + second).toUpperCase();
 }
 
+function Logo() {
+  return (
+    <Link href="/dashboard" className="flex items-center gap-2.5">
+      <ShieldCheck className="h-7 w-7 text-primary" />
+      <span className="text-lg font-bold tracking-tight text-primary">DocChain</span>
+    </Link>
+  );
+}
+
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <nav aria-label="Principal">
+      {NAV_ITEMS.map((item) => {
+        const active =
+          pathname === item.href ||
+          (item.href === '/dashboard' && pathname.startsWith('/documents')) ||
+          (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'mb-1 flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+              active
+                ? 'bg-accent text-primary'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+            )}
+          >
+            <Icon className="h-[18px] w-[18px]" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -37,6 +70,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const fetchMe = useAuthStore((s) => s.fetchMe);
   const logout = useAuthStore((s) => s.logout);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -55,54 +89,58 @@ export function Shell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-[240px_1fr] bg-background">
-      <aside className="flex flex-col border-r border-border bg-card px-4 py-6">
-        <div className="mb-4 flex items-center gap-2.5 border-b border-border px-2 pb-6">
-          <ShieldCheck className="h-7 w-7 text-primary" />
-          <span className="text-lg font-bold text-primary tracking-tight">
-            DocChain
-          </span>
+    <div className="min-h-screen bg-background md:grid md:grid-cols-[240px_1fr]">
+      <aside className="hidden border-r border-border bg-card px-4 py-6 md:flex md:flex-col">
+        <div className="mb-4 border-b border-border px-2 pb-6">
+          <Logo />
         </div>
-
-        <nav className="flex-1">
-          {NAV_ITEMS.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== '/dashboard' && pathname.startsWith(item.href));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mb-1 flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-accent text-primary'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                )}
-              >
-                <Icon className="h-[18px] w-[18px]" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <NavLinks pathname={pathname} />
       </aside>
 
-      <div className="flex flex-col">
-        <header className="flex items-center justify-end gap-4 border-b border-border bg-card px-8 py-3.5">
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card px-4 py-6">
+            <div className="mb-4 flex items-center justify-between border-b border-border px-2 pb-6">
+              <Logo />
+              <button
+                type="button"
+                aria-label="Fechar menu"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary"
+                onClick={() => setMenuOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-col">
+        <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-3 md:justify-end md:px-8 md:py-3.5">
+          <div className="flex items-center gap-3 md:hidden">
+            <button
+              type="button"
+              aria-label="Abrir menu"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary"
+              onClick={() => setMenuOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <Logo />
+          </div>
           {user && (
-            <>
+            <div className="flex items-center gap-3 md:gap-4">
               <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-foreground">
-                    {user.name ?? user.email}
-                  </div>
-                  {user.name && (
-                    <div className="text-xs text-muted-foreground">
-                      {user.email}
-                    </div>
-                  )}
+                <div className="hidden text-right sm:block">
+                  <div className="text-sm font-medium text-foreground">{user.name ?? user.email}</div>
+                  {user.name && <div className="text-xs text-muted-foreground">{user.email}</div>}
                 </div>
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                   {initials(user.name, user.email)}
@@ -111,14 +149,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button
                 onClick={onLogout}
                 title="Sair"
+                aria-label="Sair"
                 className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 <LogOut className="h-[18px] w-[18px]" />
               </button>
-            </>
+            </div>
           )}
         </header>
-        <main className="flex-1 p-8">{children}</main>
+        <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

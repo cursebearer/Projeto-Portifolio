@@ -37,14 +37,14 @@ export function DocumentTable({ documents }: { documents: DocumentDto[] }) {
       <div className="rounded-xl border border-border bg-card p-12 text-center">
         <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground opacity-40" />
         <p className="text-sm text-muted-foreground">
-          Nenhum documento encontrado. Faça upload do primeiro pra começar.
+          Nenhum documento encontrado com esses filtros.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="bg-secondary hover:bg-secondary">
