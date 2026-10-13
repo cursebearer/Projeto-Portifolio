@@ -76,7 +76,11 @@ export class SharingService {
     await this.mailer.send({
       to: dto.email,
       subject: `DocChain — Registro do documento ${document.fileName}`,
-      text: this.buildEmailText(document.fileName, dto.message),
+      text: this.buildEmailText(
+        document.fileName,
+        this.pdf.verifyUrl(document.hash),
+        dto.message,
+      ),
       attachments: [
         {
           filename: document.fileName,
@@ -130,18 +134,23 @@ export class SharingService {
     }
   }
 
-  private buildEmailText(fileName: string, message?: string): string {
+  private buildEmailText(
+    fileName: string,
+    verifyUrl: string,
+    message?: string,
+  ): string {
     const lines = [
       `Você recebeu o documento "${fileName}" pela plataforma DocChain.`,
       '',
       'Estão anexos:',
       '  1. O documento original',
-      '  2. Um comprovante em PDF com hash SHA-256, transação blockchain e QR de verificação',
+      '  2. Um comprovante em PDF com a impressão digital (SHA-256), o registro na blockchain e um QR code',
       '',
-      'Para verificar a autenticidade sem depender do DocChain:',
-      '  1. Calcule o SHA-256 do documento anexo (comandos no comprovante)',
-      '  2. Compare com o hash impresso no comprovante',
-      '  3. (Opcional) Escaneie o QR ou acesse o link do Etherscan para conferência on-chain',
+      'Para confirmar que o documento é autêntico:',
+      `  1. Abra ${verifyUrl}`,
+      '  2. Arraste o arquivo anexo na página — a verificação é feita no seu navegador e o arquivo não é enviado.',
+      '',
+      'Se preferir verificar sem depender do DocChain, siga as instruções do comprovante em PDF.',
     ];
     if (message) {
       lines.push('', 'Mensagem do remetente:', message);

@@ -4,7 +4,7 @@ import { Document } from '@prisma/client';
 import PDFDocument = require('pdfkit');
 import { toDataURL as qrToDataURL } from 'qrcode';
 
-const TEMPLATE_VERSION = 'v1.0';
+const TEMPLATE_VERSION = 'v1.1';
 
 @Injectable()
 export class PdfService {
@@ -23,12 +23,16 @@ export class PdfService {
         : `https://${network}.etherscan.io/tx`;
   }
 
+  verifyUrl(hash: string): string {
+    return `${this.verifyBaseUrl}/${hash}`;
+  }
+
   async generateComprovante(
     document: Document,
     emitterUser: { name: string | null; email: string },
   ): Promise<Buffer> {
     const hash = document.hash;
-    const verifyUrl = `${this.verifyBaseUrl}/${hash}`;
+    const verifyUrl = this.verifyUrl(hash);
     const txUrl = document.txHash
       ? `${this.etherscanBaseUrl}/${document.txHash}`
       : null;
@@ -55,10 +59,7 @@ export class PdfService {
         ['Nome do arquivo', document.fileName],
         ['Tipo (MIME)', document.mimeType],
         ['Tamanho', `${document.fileSize} bytes`],
-        [
-          'Registrado por',
-          `${emitterUser.name ?? '—'} (${emitterUser.email})`,
-        ],
+        ['Registrado por', `${emitterUser.name ?? '—'} (${emitterUser.email})`],
         ['Data do registro (UTC)', this.formatDate(document.confirmedAt)],
       ]);
 
@@ -80,34 +81,51 @@ export class PdfService {
 
       this.section(doc, 'COMO VERIFICAR AUTENTICIDADE');
       doc
-        .font('Helvetica')
+        .font('Helvetica-Bold')
         .fontSize(9)
-        .text('1. Calcule o SHA-256 do arquivo anexado a este email:');
-      doc
-        .font('Courier')
-        .fontSize(9)
-        .text('   Linux/Mac: sha256sum contrato.pdf')
-        .text('   Windows:   certutil -hashfile contrato.pdf SHA256');
-      doc.moveDown(0.3);
+        .text('Forma simples (recomendada)');
       doc
         .font('Helvetica')
         .fontSize(9)
         .text(
-          '2. Compare com a impressão digital acima. Se coincidir, o arquivo é idêntico ao registrado.',
+          '1. Abra o link abaixo ou escaneie o QR code com a câmera do celular.',
+        )
+        .text(
+          '2. Na página aberta, arraste o arquivo recebido. A impressão digital é calculada no seu navegador — o arquivo não é enviado a ninguém.',
+        )
+        .text(
+          '3. Se aparecer "Documento Autêntico", o arquivo é idêntico ao registrado.',
         );
+      doc.fillColor('#1e40af').text(verifyUrl);
+      doc.fillColor('#000000');
       doc.moveDown(0.3);
+      doc.image(qrBuffer, { width: 90 });
+      doc.moveDown(0.6);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .text('Verificação independente (sem depender do DocChain)');
       doc
         .font('Helvetica')
         .fontSize(9)
-        .text('3. Confirme na blockchain (opcional). Escaneie o QR ou acesse:');
-      doc.fillColor('#1e40af').text(verifyUrl);
+        .text(
+          'Calcule a impressão digital do arquivo no terminal e compare com a impressão digital (SHA-256) acima:',
+        );
+      const fileArg = `"${document.fileName.replace(/"/g, '')}"`;
+      doc
+        .font('Courier')
+        .fontSize(9)
+        .text(`   Windows:   certutil -hashfile ${fileArg} SHA256`)
+        .text(`   Linux/Mac: sha256sum ${fileArg}`);
       if (txUrl) {
-        doc.fillColor('#000000').text('Ou diretamente no Etherscan:');
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .text('A transação do registro pode ser conferida no Etherscan:');
         doc.fillColor('#1e40af').text(txUrl);
       }
       doc.fillColor('#000000');
-      doc.moveDown(0.5);
-      doc.image(qrBuffer, { width: 100, align: 'right' as never });
 
       doc.moveDown(1);
       doc

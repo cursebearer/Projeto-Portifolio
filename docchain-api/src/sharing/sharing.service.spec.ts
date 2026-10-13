@@ -22,7 +22,7 @@ describe('SharingService', () => {
   };
   let crypto: { deserializePayload: jest.Mock; decrypt: jest.Mock };
   let storage: { retrieve: jest.Mock };
-  let pdf: { generateComprovante: jest.Mock };
+  let pdf: { generateComprovante: jest.Mock; verifyUrl: jest.Mock };
   let mailer: { send: jest.Mock };
   let audit: { log: jest.Mock };
 
@@ -72,7 +72,12 @@ describe('SharingService', () => {
       retrieve: jest.fn().mockResolvedValue(Buffer.from('serialized')),
     };
     pdf = {
-      generateComprovante: jest.fn().mockResolvedValue(Buffer.from('%PDF-fake')),
+      generateComprovante: jest
+        .fn()
+        .mockResolvedValue(Buffer.from('%PDF-fake')),
+      verifyUrl: jest.fn(
+        (hash: string) => `http://localhost:3001/verify/${hash}`,
+      ),
     };
     mailer = { send: jest.fn().mockResolvedValue(undefined) };
     audit = { log: jest.fn().mockResolvedValue(undefined) };
@@ -108,13 +113,16 @@ describe('SharingService', () => {
 
       expect(storage.retrieve).toHaveBeenCalledWith(confirmedDoc.hash);
       expect(crypto.decrypt).toHaveBeenCalled();
-      expect(pdf.generateComprovante).toHaveBeenCalledWith(
-        confirmedDoc,
-        { name: 'Rafael', email: 'rafa@docchain.dev' },
-      );
+      expect(pdf.generateComprovante).toHaveBeenCalledWith(confirmedDoc, {
+        name: 'Rafael',
+        email: 'rafa@docchain.dev',
+      });
       expect(mailer.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: dto.email,
+          text: expect.stringContaining(
+            `Abra http://localhost:3001/verify/${confirmedDoc.hash}`,
+          ),
           attachments: expect.arrayContaining([
             expect.objectContaining({ filename: 'contrato.pdf' }),
             expect.objectContaining({

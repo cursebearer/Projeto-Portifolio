@@ -17,10 +17,7 @@ describe('PdfService', () => {
       }),
     };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        PdfService,
-        { provide: ConfigService, useValue: config },
-      ],
+      providers: [PdfService, { provide: ConfigService, useValue: config }],
     }).compile();
     service = module.get<PdfService>(PdfService);
   });
@@ -49,6 +46,10 @@ describe('PdfService', () => {
     deletedAt: null,
     previousDocumentId: null,
     ...overrides,
+  });
+
+  it('verifyUrl aponta para a página de verificação do web', () => {
+    expect(service.verifyUrl('abc')).toBe('http://localhost:3001/verify/abc');
   });
 
   it('gera Buffer PDF válido (assinatura %PDF-)', async () => {
