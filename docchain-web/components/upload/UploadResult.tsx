@@ -1,41 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { CheckCircle2, Copy, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
+import { CheckCircle2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CopyableField as Field } from '@/components/documents/CopyableField';
 import { etherscanTxUrl, with0x } from '@/lib/format';
 import type { DocumentDto } from '@/types/document';
-
-async function copy(text: string, label: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${label} copiado`);
-  } catch {
-    toast.error('Não foi possível copiar');
-  }
-}
-
-function Field({ label, value, copyLabel }: { label: string; value: string; copyLabel?: string }) {
-  return (
-    <div className="py-2.5">
-      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
-      <div className="flex items-start gap-2">
-        <code className="min-w-0 flex-1 break-all font-mono text-[13px] text-foreground">{value}</code>
-        {copyLabel && (
-          <button
-            type="button"
-            onClick={() => void copy(value, copyLabel)}
-            className="text-muted-foreground hover:text-primary"
-            aria-label={`Copiar ${copyLabel.toLowerCase()}`}
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function UploadResult({ document, onReset }: { document: DocumentDto; onReset: () => void }) {
   return (

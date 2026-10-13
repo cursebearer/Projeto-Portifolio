@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Copy, FileText, MoreHorizontal } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { StatusBadge } from '@/components/documents/StatusBadge';
+import { copyToClipboard } from '@/lib/clipboard';
 import { truncateHash } from '@/lib/format';
 import type { DocumentDto } from '@/types/document';
 
@@ -29,15 +29,6 @@ function formatRelative(date: string): string {
   const diffWeeks = Math.floor(diffDays / 7);
   if (diffWeeks < 4) return `há ${diffWeeks} sem`;
   return new Date(date).toLocaleDateString('pt-BR');
-}
-
-async function copyToClipboard(text: string, label = 'Hash') {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${label} copiado`);
-  } catch {
-    toast.error('Não foi possível copiar');
-  }
 }
 
 export function DocumentTable({ documents }: { documents: DocumentDto[] }) {
@@ -91,7 +82,7 @@ export function DocumentTable({ documents }: { documents: DocumentDto[] }) {
                   {truncateHash(doc.hash)}
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(`0x${doc.hash}`)}
+                    onClick={() => copyToClipboard(`0x${doc.hash}`, 'Hash')}
                     className="rounded p-1 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
                     title="Copiar hash"
                   >
