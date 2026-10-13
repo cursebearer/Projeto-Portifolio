@@ -18,7 +18,7 @@ export default function TermsPage() {
       <h2>O que é o serviço</h2>
       <p>
         O DocChain registra a impressão digital (hash SHA-256) de documentos em blockchain e permite
-        verificar, depois, se um arquivo é idêntico ao registrado. É um projeto open source e
+        verificar, depois, se um arquivo é idêntico ao registrado. É um projeto
         acadêmico, oferecido <strong>gratuitamente</strong> e operando na <strong>Sepolia</strong>, a
         rede de testes do Ethereum.
       </p>

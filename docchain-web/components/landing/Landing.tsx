@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Blocks,
-  Code2,
+  FileCheck,
   Fingerprint,
   Lock,
   ScanSearch,
@@ -13,7 +13,6 @@ import {
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { Button } from '@/components/ui/button';
-import { GITHUB_URL } from '@/lib/site';
 
 const STEPS = [
   {
@@ -50,9 +49,9 @@ const FEATURES = [
     text: 'Na blockchain vai só a impressão digital — nunca o conteúdo, seu nome ou seu e-mail.',
   },
   {
-    icon: Code2,
-    title: 'Open source',
-    text: 'Todo o código é público e auditável. Rodando na Sepolia, a rede de testes do Ethereum, de forma gratuita.',
+    icon: FileCheck,
+    title: 'Comprovante para compartilhar',
+    text: 'Envie o documento por e-mail com um comprovante em PDF e QR code. Quem recebe confere a autenticidade sozinho.',
   },
 ];
 
@@ -176,18 +175,14 @@ export function Landing() {
         <section className="border-t border-border px-4 py-16 text-center">
           <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Comece agora</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Gratuito e open source. Crie sua conta e registre seu primeiro documento em menos de um
-            minuto.
+            Crie sua conta e registre seu primeiro documento em menos de um minuto.
           </p>
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/register">Criar conta grátis</Link>
             </Button>
-            <Button asChild size="lg" variant="ghost">
-              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                <Code2 className="h-4 w-4" />
-                Ver o código no GitHub
-              </a>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/verify">Verificar um documento</Link>
             </Button>
           </div>
         </section>

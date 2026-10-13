@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { GITHUB_URL } from '@/lib/site';
 
 export function PublicFooter() {
   return (
@@ -11,11 +10,8 @@ export function PublicFooter() {
         <Link href="/termos" className="hover:text-foreground">
           Termos de Uso
         </Link>
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-          GitHub
-        </a>
       </nav>
-      <p>DocChain · Open Source · Rodando em Sepolia Testnet</p>
+      <p>DocChain · Rodando em Sepolia Testnet</p>
     </footer>
   );
 }
