@@ -50,6 +50,7 @@ import { VerificationModule } from './verification/verification.module';
         SMTP_PASSWORD: Joi.string().required(),
         SMTP_FROM: Joi.string().required(),
         SHARE_RATE_LIMIT_PER_HOUR: Joi.number().default(5),
+        CORS_ORIGIN: Joi.string().default('http://localhost:3001'),
       }),
     }),
     ThrottlerModule.forRootAsync({

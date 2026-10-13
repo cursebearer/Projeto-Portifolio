@@ -23,6 +23,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: resolveLogLevels(),
   });
+
+  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3001';
+  app.enableCors({
+    origin: corsOrigin.split(',').map((o) => o.trim()),
+    credentials: true,
+  });
+
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
