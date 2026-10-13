@@ -65,7 +65,12 @@ function ResultGrid({ hash, result }: { hash: string; result: VerifyResult }) {
   );
 }
 
-export function PublicVerify({ initialHash = '' }: { initialHash?: string }) {
+interface PublicVerifyProps {
+  initialHash?: string;
+  showSignupCta?: boolean;
+}
+
+export function PublicVerify({ initialHash = '', showSignupCta = true }: PublicVerifyProps) {
   const [mode, setMode] = useState<Mode>(initialHash ? 'hash' : 'file');
   const [hashInput, setHashInput] = useState(initialHash);
   const [outcome, setOutcome] = useState<Outcome>(
@@ -190,12 +195,14 @@ export function PublicVerify({ initialHash = '' }: { initialHash?: string }) {
           <p className="mt-2 text-lg font-semibold text-success">Documento Autêntico</p>
           <p className="text-sm text-muted-foreground">Este hash está registrado na blockchain Sepolia.</p>
           <ResultGrid hash={outcome.hash} result={outcome.result} />
-          <p className="mt-5 border-t border-border pt-4 text-sm text-muted-foreground">
+          {showSignupCta && (
+            <p className="mt-5 border-t border-border pt-4 text-sm text-muted-foreground">
             Quer registrar seus próprios documentos?{' '}
             <Link href="/register" className="font-semibold text-primary hover:underline">
               Criar conta gratuita
             </Link>
           </p>
+          )}
         </div>
       )}
 

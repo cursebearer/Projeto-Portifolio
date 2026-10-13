@@ -86,6 +86,14 @@ describe('PublicVerify', () => {
     expect(screen.getByLabelText('Hash SHA-256')).toHaveValue(ABC_HASH);
   });
 
+  it('usuário logado não vê o convite para criar conta', async () => {
+    verifyMock.mockResolvedValue(onChain());
+    render(<PublicVerify initialHash={ABC_HASH} showSignupCta={false} />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Documento Autêntico');
+    expect(screen.queryByRole('link', { name: 'Criar conta gratuita' })).not.toBeInTheDocument();
+  });
+
   it('hash inválido na URL não consulta a blockchain', () => {
     render(<PublicVerify initialHash="nao-e-hash" />);
     expect(verifyMock).not.toHaveBeenCalled();
