@@ -453,6 +453,22 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
 - [x] Empty states (sem documentos ainda)
 - [x] Favicon e metadados básicos — `app/icon.svg`, título por rota via `metadata` (template "%s · DocChain"), páginas 404 e de erro
 
+### 3.8 Home pública (landing) — CONCLUÍDA
+- [x] `/` vira landing para visitantes (logado continua indo para `/dashboard`); proxy libera `/`
+- [x] Seções: hero com CTAs (criar conta / verificar), como funciona em 3 passos, verificação pública, segurança e transparência, CTA final com link do GitHub
+- [x] Header e footer públicos compartilhados com `/verify`; `AuthCard` fluido (corrige overflow em 360px) e logo leva à home
+- [x] Sem depoimentos ou métricas fictícias — só o que o produto faz de fato
+
+### 3.9 Conta e LGPD
+- [ ] Páginas `/privacidade` e `/termos`
+- [ ] Página `/conta`: editar nome, exportar dados, excluir conta
+- [ ] Backend: `PATCH /auth/me`, `GET /auth/me/export`, `DELETE /auth/me` (RFC 6.4)
+
+### 3.10 Ajustes de UX
+- [ ] Aviso/renovação de sessão (JWT de 15 min)
+- [ ] Cards do dashboard contemplando documentos FAILED
+- [ ] Reenviar documento FAILED (RN07)
+
 ### Critério de conclusão da Fase 3
 ```
 Executar o fluxo completo via browser:

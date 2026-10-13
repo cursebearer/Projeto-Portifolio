@@ -6,7 +6,8 @@ export function proxy(request: NextRequest) {
   const isAuthPage =
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/register');
-  const isPublicPage = request.nextUrl.pathname.startsWith('/verify');
+  const { pathname } = request.nextUrl;
+  const isPublicPage = pathname === '/' || pathname.startsWith('/verify');
 
   if (!token && !isAuthPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url));

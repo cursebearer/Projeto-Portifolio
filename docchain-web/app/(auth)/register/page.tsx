@@ -89,7 +89,7 @@ export default function RegisterPage() {
     <AuthCard
       title="Criar conta"
       subtitle="Comece a registrar seus documentos em minutos"
-      width="w-[460px]"
+      width="max-w-[460px]"
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
