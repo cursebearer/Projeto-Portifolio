@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage } from '@/components/public/LegalPage';
-import { GITHUB_URL } from '@/lib/site';
+import { CONTACT_EMAIL } from '@/lib/site';
 
 export const metadata: Metadata = { title: 'Política de Privacidade' };
 
@@ -99,9 +99,9 @@ export default function PrivacyPage() {
 
       <h2>Contato</h2>
       <p>
-        Dúvidas sobre esta política ou sobre seus dados podem ser enviadas abrindo uma issue no{' '}
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-          repositório do projeto
+        Dúvidas sobre esta política ou sobre seus dados podem ser enviadas para{' '}
+        <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
+          {CONTACT_EMAIL}
         </a>
         .
       </p>
