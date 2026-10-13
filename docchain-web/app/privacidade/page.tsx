@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Política de Privacidade" updatedAt="13 de outubro de 2026">
       <p>
-        O DocChain é um projeto open source e acadêmico (Trabalho de Conclusão de Curso de Engenharia
+        O DocChain é um projeto acadêmico (Trabalho de Conclusão de Curso de Engenharia
         de Software — Católica SC) que registra a impressão digital de documentos em blockchain. Esta
         política explica quais dados pessoais tratamos, por quê e como você exerce seus direitos pela
         Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
@@ -94,11 +94,7 @@ export default function PrivacyPage() {
       <h2>Segurança</h2>
       <p>
         Arquivos cifrados em repouso, senhas com bcrypt, sessão em cookie httpOnly e limites de
-        requisições contra abuso. O código é aberto e pode ser auditado no{' '}
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-          GitHub
-        </a>
-        .
+        requisições contra abuso.
       </p>
 
       <h2>Contato</h2>
