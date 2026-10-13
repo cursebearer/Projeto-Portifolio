@@ -24,11 +24,17 @@ export async function getDocument(id: string): Promise<DocumentDto> {
   return data;
 }
 
-export async function uploadDocument(file: File): Promise<DocumentDto> {
+export async function uploadDocument(
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<DocumentDto> {
   const form = new FormData();
   form.append('file', file);
   const { data } = await api.post<DocumentDto>('/documents', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (onProgress && e.total) onProgress(e.loaded / e.total);
+    },
   });
   return data;
 }
