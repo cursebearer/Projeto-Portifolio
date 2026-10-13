@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuditAction } from '@prisma/client';
 import { Response } from 'express';
 import { AuditLogService } from '../audit/audit-log.service';
+import { AccountService } from './account.service';
 import { AuthController } from './auth.controller';
 import { AuthService, AuthenticatedUser } from './auth.service';
 
@@ -14,6 +15,11 @@ describe('AuthController', () => {
   };
   let config: { get: jest.Mock };
   let audit: { log: jest.Mock };
+  let account: {
+    updateName: jest.Mock;
+    exportData: jest.Mock;
+    deleteAccount: jest.Mock;
+  };
 
   const user: AuthenticatedUser = {
     id: 'u1',
@@ -34,6 +40,11 @@ describe('AuthController', () => {
     };
     config = { get: jest.fn() };
     audit = { log: jest.fn().mockResolvedValue(undefined) };
+    account = {
+      updateName: jest.fn(),
+      exportData: jest.fn(),
+      deleteAccount: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -41,6 +52,7 @@ describe('AuthController', () => {
         { provide: AuthService, useValue: authService },
         { provide: ConfigService, useValue: config },
         { provide: AuditLogService, useValue: audit },
+        { provide: AccountService, useValue: account },
       ],
     }).compile();
 
@@ -94,10 +106,7 @@ describe('AuthController', () => {
       config.get.mockReturnValue('production');
       const res = makeRes();
 
-      await controller.login(
-        { email: 'r@r.com', password: 'abcdefgh' },
-        res,
-      );
+      await controller.login({ email: 'r@r.com', password: 'abcdefgh' }, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
         'access_token',
@@ -144,6 +153,49 @@ describe('AuthController', () => {
   describe('GET /auth/me', () => {
     it('devolve o usuário injetado pelo decorator', () => {
       expect(controller.me(user)).toBe(user);
+    });
+  });
+
+  describe('conta (LGPD)', () => {
+    it('PATCH /auth/me atualiza o nome do usuário logado', async () => {
+      account.updateName.mockResolvedValue({ ...user, name: 'Novo' });
+
+      const result = await controller.updateMe(user, { name: 'Novo' });
+
+      expect(account.updateName).toHaveBeenCalledWith('u1', 'Novo');
+      expect(result.name).toBe('Novo');
+    });
+
+    it('GET /auth/me/export delega ao AccountService', async () => {
+      const data = { exportedAt: 'x', user, documents: [], shares: [] };
+      account.exportData.mockResolvedValue(data);
+
+      await expect(controller.exportMe(user)).resolves.toBe(data);
+      expect(account.exportData).toHaveBeenCalledWith('u1');
+    });
+
+    it('DELETE /auth/me exclui a conta e apaga o cookie', async () => {
+      config.get.mockReturnValue('development');
+      const res = makeRes();
+
+      await controller.deleteMe(user, { password: 'senha12345' }, res);
+
+      expect(account.deleteAccount).toHaveBeenCalledWith('u1', 'senha12345');
+      expect(res.cookie).toHaveBeenCalledWith(
+        'access_token',
+        '',
+        expect.objectContaining({ maxAge: 0, httpOnly: true }),
+      );
+    });
+
+    it('DELETE /auth/me não apaga o cookie se a exclusão falhar', async () => {
+      account.deleteAccount.mockRejectedValue(new Error('Senha incorreta.'));
+      const res = makeRes();
+
+      await expect(
+        controller.deleteMe(user, { password: 'x' }, res),
+      ).rejects.toThrow('Senha incorreta.');
+      expect(res.cookie).not.toHaveBeenCalled();
     });
   });
 });

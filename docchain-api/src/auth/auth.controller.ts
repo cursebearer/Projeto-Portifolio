@@ -7,6 +7,8 @@ import {
   Res,
   UseGuards,
   Get,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
@@ -14,9 +16,12 @@ import { Throttle } from '@nestjs/throttler';
 import { AuditAction } from '@prisma/client';
 import type { Response } from 'express';
 import { AuditLogService } from '../audit/audit-log.service';
+import { AccountService } from './account.service';
+import type { AccountExport } from './account.service';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { DeleteAccountDto, UpdateMeDto } from './dto/account.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -30,6 +35,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
     private readonly audit: AuditLogService,
+    private readonly account: AccountService,
   ) {}
 
   @Post('register')
@@ -70,13 +76,43 @@ export class AuthController {
     return user;
   }
 
+  @Patch('me')
+  @ApiCookieAuth('access_token')
+  @UseGuards(JwtAuthGuard)
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateMeDto,
+  ): Promise<AuthenticatedUser> {
+    return this.account.updateName(user.id, dto.name);
+  }
+
+  @Get('me/export')
+  @ApiCookieAuth('access_token')
+  @UseGuards(JwtAuthGuard)
+  exportMe(@CurrentUser() user: AuthenticatedUser): Promise<AccountExport> {
+    return this.account.exportData(user.id);
+  }
+
+  @Delete('me')
+  @ApiCookieAuth('access_token')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.account.deleteAccount(user.id, dto.password);
+    this.clearAccessTokenCookie(res);
+  }
+
   private setAccessTokenCookie(
     res: Response,
     token: string,
     maxAgeSeconds: number,
   ): void {
-    const isProduction =
-      this.config.get<string>('NODE_ENV') === 'production';
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
     res.cookie(ACCESS_TOKEN_COOKIE, token, {
       httpOnly: true,
       secure: isProduction,
@@ -87,8 +123,7 @@ export class AuthController {
   }
 
   private clearAccessTokenCookie(res: Response): void {
-    const isProduction =
-      this.config.get<string>('NODE_ENV') === 'production';
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
     res.cookie(ACCESS_TOKEN_COOKIE, '', {
       httpOnly: true,
       secure: isProduction,

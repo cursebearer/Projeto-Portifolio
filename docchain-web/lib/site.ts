@@ -1,1 +1,1 @@
-export const GITHUB_URL = 'https://github.com/cursebearer/Projeto-Portifolio';
+export const CONTACT_EMAIL = 'docchain@gmail.com';

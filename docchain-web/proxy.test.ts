@@ -18,6 +18,13 @@ describe('proxy', () => {
     expect(location('/verify')).toBeNull();
     expect(location('/verify/abc')).toBeNull();
     expect(location('/login')).toBeNull();
+    expect(location('/privacidade')).toBeNull();
+    expect(location('/termos')).toBeNull();
+  });
+
+  it('minha conta exige sessão', () => {
+    expect(location('/conta')).toBe('http://localhost:3001/login');
+    expect(location('/conta', 'jwt')).toBeNull();
   });
 
   it('rotas protegidas sem sessão vão para o login', () => {
