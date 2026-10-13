@@ -320,7 +320,7 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
   7. Cria row `DocumentShare` (rastreio)
   8. `AuditLog.log(SHARE)` com destinatário no metadata
 - [x] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
-- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain) — implementado como 20/min; ajustar para 5/hora
+- [x] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain) — `SharingService.assertRateLimit` via `SHARE_RATE_LIMIT_PER_HOUR` + throttle 20/min no endpoint
 - [x] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
 - [x] Novo enum `AuditAction.SHARE`
 - [x] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (Joi validation) — `MAIL_PROVIDER` descartado (SMTP genérico já cobre Resend/SendGrid)
