@@ -39,7 +39,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
 
     async function load() {
       try {
@@ -128,10 +127,11 @@ export default function DashboardPage() {
         <select
           value={statusFilter}
           onChange={(e) => {
+            setIsLoading(true);
             setPage(1);
             setStatusFilter(e.target.value as '' | DocumentStatus);
           }}
-          className="max-w-[220px] rounded-md border border-input bg-secondary px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="max-w-[220px] rounded-md border border-input bg-secondary px-3.5 py-2.5 text-sm text-foreground outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -152,7 +152,10 @@ export default function DashboardPage() {
             <Pagination
               page={page}
               totalPages={totalPages}
-              onChange={setPage}
+              onChange={(next) => {
+                setIsLoading(true);
+                setPage(next);
+              }}
               totalLabel={paginationInfo}
             />
           )}
