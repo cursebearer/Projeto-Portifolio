@@ -71,7 +71,11 @@ export class AuthService {
       await this.audit.log({
         action: AuditAction.LOGIN,
         userId: null,
-        metadata: { success: false, email: dto.email, reason: 'user_not_found' },
+        metadata: {
+          success: false,
+          email: dto.email,
+          reason: 'user_not_found',
+        },
       });
       throw new UnauthorizedException('Credenciais inválidas');
     }
@@ -89,11 +93,7 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const expiresIn = this.config.get<string>('JWT_EXPIRES_IN', '15m');
-    const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
-      { expiresIn } as unknown as import('@nestjs/jwt').JwtSignOptions,
-    );
+    const { accessToken, expiresInSeconds } = await this.issueAccessToken(user);
 
     await this.audit.log({
       action: AuditAction.LOGIN,
@@ -103,8 +103,23 @@ export class AuthService {
 
     return {
       accessToken,
-      expiresInSeconds: this.parseExpiresInSeconds(expiresIn),
+      expiresInSeconds,
       user: this.toAuthenticatedUser(user),
+    };
+  }
+
+  async issueAccessToken(user: {
+    id: string;
+    email: string;
+  }): Promise<{ accessToken: string; expiresInSeconds: number }> {
+    const expiresIn = this.config.get<string>('JWT_EXPIRES_IN', '15m');
+    const accessToken = await this.jwt.signAsync(
+      { sub: user.id, email: user.email },
+      { expiresIn } as unknown as import('@nestjs/jwt').JwtSignOptions,
+    );
+    return {
+      accessToken,
+      expiresInSeconds: this.parseExpiresInSeconds(expiresIn),
     };
   }
 

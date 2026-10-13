@@ -15,7 +15,7 @@ describe('DashboardPage', () => {
 
   it('sem documentos mostra convite para o primeiro upload', async () => {
     vi.mocked(listDocuments).mockResolvedValue({ items: [], total: 0, page: 1, limit: 10 });
-    vi.mocked(getDocumentStats).mockResolvedValue({ total: 0, confirmed: 0, pending: 0 });
+    vi.mocked(getDocumentStats).mockResolvedValue({ total: 0, confirmed: 0, pending: 0, failed: 0 });
     render(<DashboardPage />);
 
     expect(await screen.findByText('Você ainda não registrou nenhum documento')).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe('DashboardPage', () => {
       page: 1,
       limit: 10,
     });
-    vi.mocked(getDocumentStats).mockResolvedValue({ total: 2, confirmed: 2, pending: 0 });
+    vi.mocked(getDocumentStats).mockResolvedValue({ total: 2, confirmed: 2, pending: 0, failed: 0 });
     const user = userEvent.setup();
     render(<DashboardPage />);
 
@@ -49,7 +49,7 @@ describe('DashboardPage', () => {
 
   it('filtro de status consulta a API com o status escolhido', async () => {
     vi.mocked(listDocuments).mockResolvedValue({ items: [makeDocument()], total: 1, page: 1, limit: 10 });
-    vi.mocked(getDocumentStats).mockResolvedValue({ total: 1, confirmed: 1, pending: 0 });
+    vi.mocked(getDocumentStats).mockResolvedValue({ total: 1, confirmed: 1, pending: 0, failed: 0 });
     const user = userEvent.setup();
     render(<DashboardPage />);
     await screen.findByText('contrato.pdf');

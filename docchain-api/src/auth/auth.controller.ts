@@ -25,8 +25,7 @@ import { DeleteAccountDto, UpdateMeDto } from './dto/account.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-
-const ACCESS_TOKEN_COOKIE = 'access_token';
+import { ACCESS_TOKEN_COOKIE, setAccessTokenCookie } from './session-cookie';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -112,14 +111,12 @@ export class AuthController {
     token: string,
     maxAgeSeconds: number,
   ): void {
-    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
-    res.cookie(ACCESS_TOKEN_COOKIE, token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: maxAgeSeconds * 1000,
-    });
+    setAccessTokenCookie(
+      res,
+      token,
+      maxAgeSeconds,
+      this.config.get<string>('NODE_ENV') === 'production',
+    );
   }
 
   private clearAccessTokenCookie(res: Response): void {

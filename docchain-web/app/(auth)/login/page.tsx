@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { AxiosError } from 'axios';
 import { AuthCard } from '@/components/auth/AuthCard';
@@ -18,6 +18,12 @@ export default function LoginPage() {
   const isLoading = useAuthStore((s) => s.isLoading);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('expirada')) {
+      toast.info('Sua sessão expirou por inatividade. Entre novamente.');
+    }
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
