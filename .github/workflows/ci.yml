@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contracts (Hardhat)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docchain-contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docchain-contracts/package-lock.json
+      - run: npm ci
+      - run: npx hardhat compile
+      - run: npx hardhat test
+
+  api:
+    name: API (NestJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docchain-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docchain-api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Lint
+        # TODO: tornar bloqueante apos zerar os erros de no-unsafe-* nos specs
+        continue-on-error: true
+        run: npx eslint "{src,test}/**/*.ts"
+      - run: npm run build
+      - name: Test + coverage (threshold 75%)
+        run: npm run test:cov -- --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: docchain-api/coverage/lcov.info
+          if-no-files-found: ignore
+
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docchain-web
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docchain-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  audit:
+    name: npm audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    # TODO: tornar bloqueante apos atualizar deps com vulnerabilidades high/critical
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [docchain-contracts, docchain-api, docchain-web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm audit --omit=dev --audit-level=high

@@ -3,11 +3,11 @@
 ## Visão Geral das Fases
 
 ```
-Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4
-  Setup   Contrato  Backend  Frontend  Integração
-  (1d)    (2d)      (5d)     (4d)      (2d)
-                                        ↓
-                                    TCC Entregue
+Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4 → Fase 5
+  Setup   Contrato  Backend  Frontend  Integração  PAC VIII
+  (1d)    (2d)      (5d)     (4d)      (2d)        (4d)
+                                                    ↓
+                                            TCC Entregue (30/11)
 ```
 
 ---
@@ -163,7 +163,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] `VerificationAttemptService.record(hash, found, source, ...)` — idem
 - [x] `RequestContextInterceptor` global via `AsyncLocalStorage` (sem dep externa) — captura ip + userAgent + userId
 - [x] Retro-instrumentar endpoints da 4a com AuditLog UPLOAD/DELETE/DOWNLOAD
-- [ ] AuditLog LOGIN/LOGOUT/REGISTER — **Sessão 5** (instrumentar AuthController)
+- [x] AuditLog LOGIN/LOGOUT/REGISTER — instrumentado no AuthService/AuthController
 
 ### 2.6b AuditLog + VerificationAttempt (dia 4) — CONCLUÍDA (feito na Sessão 4b)
 
@@ -308,9 +308,9 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
 **Motivação:** caso de uso jurídico/negocial. Rafael registra contrato hoje e precisa provar autenticidade ao juiz daqui a 5 anos. Envia via DocChain, destinatário recebe doc + comprovante com QR + hash + tx — verifica offline (recalcula SHA-256) ou online (QR aponta pra `/verify/public/:hash`).
 
 **Escopo:**
-- [ ] `MailerModule` — `MailerService` usando `nodemailer` + provider SMTP (Resend/SendGrid — free tier suficiente pro TCC)
-- [ ] `PdfModule` — `PdfService` que gera comprovante 1-página com `pdfmake` + QR via `qrcode`
-- [ ] `SharingModule` — `SharingService.share(userId, docId, email, message?)`
+- [x] `MailerModule` — `MailerService` usando `nodemailer` + provider SMTP (Resend/SendGrid — free tier suficiente pro TCC)
+- [x] `PdfModule` — `PdfService` que gera comprovante 1-página com `pdfmake` + QR via `qrcode`
+- [x] `SharingModule` — `SharingService.share(userId, docId, email, message?)`
   1. Verifica ownership do documento (`Document.userId === currentUser.id`)
   2. Bloqueia se `status !== CONFIRMED` (sem prova ainda)
   3. Bloqueia se `deletedAt IS NOT NULL`
@@ -319,12 +319,12 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
   6. `mailer.send({ to, attachments: [original, comprovante], template })`
   7. Cria row `DocumentShare` (rastreio)
   8. `AuditLog.log(SHARE)` com destinatário no metadata
-- [ ] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
-- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain)
-- [ ] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
-- [ ] Novo enum `AuditAction.SHARE`
-- [ ] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `MAIL_PROVIDER` (Joi validation)
-- [ ] Specs: sharing.service.spec.ts, mailer.service.spec.ts, pdf.service.spec.ts, sharing.controller.spec.ts (nodemailer mockado com `jest.mock`)
+- [x] `POST /documents/:id/share` — body `{ email, message? }`, response 202 `{ shareId, documentId, sharedWithEmail, sentAt, comprovanteHash }` (formato completo em [API_SPEC.md](API_SPEC.md))
+- [ ] Rate limit específico (5 compartilhamentos/hora por usuário — evita spam via DocChain) — implementado como 20/min; ajustar para 5/hora
+- [x] Migration Prisma: nova tabela `DocumentShare` (id, documentId, sharedByUserId, sharedWithEmail, message, comprovanteHash, sentAt, verificationCount)
+- [x] Novo enum `AuditAction.SHARE`
+- [x] Envs novos: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (Joi validation) — `MAIL_PROVIDER` descartado (SMTP genérico já cobre Resend/SendGrid)
+- [x] Specs: sharing.service.spec.ts, mailer.service.spec.ts, pdf.service.spec.ts, sharing.controller.spec.ts (nodemailer mockado com `jest.mock`)
 
 **Comprovante PDF — campos obrigatórios:**
 - Identificação: fileName, mimeType, fileSize, usuário emissor (nome+email), timestamp registro
@@ -348,22 +348,22 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
 **Motivação:** hash SHA-256 é determinístico byte-a-byte. Se o documento é editado/assinado, o hash muda completamente e o registro on-chain original vira "prova da versão anterior". Cada versão precisa de novo registro on-chain independente, mas ligado à versão-mãe no banco off-chain.
 
 **Escopo:**
-- [ ] Migration Prisma: coluna `previousDocumentId String? @map("previous_document_id")` em `Document` (self-reference nullable)
-- [ ] Relação `previousDocument` / `nextVersions[]` no schema Prisma (index em `previousDocumentId`)
-- [ ] `DocumentsService.createVersion(userId, previousDocId, file)`
+- [x] Migration Prisma: coluna `previousDocumentId String? @map("previous_document_id")` em `Document` (self-reference nullable)
+- [x] Relação `previousDocument` / `nextVersions[]` no schema Prisma (index em `previousDocumentId`)
+- [x] `DocumentsService.createVersion(userId, previousDocId, file)`
   1. Verifica ownership do documento-mãe
   2. Bloqueia se `deletedAt IS NOT NULL` na mãe (não versiona doc excluído)
   3. Executa fluxo idêntico ao `create()` (hash → encrypt → save → registerOnChain → CONFIRMED)
   4. Row nova salva `previousDocumentId` apontando pra mãe
   5. `AuditLog.log(UPLOAD)` com metadata `{ versionOf: previousDocId }`
-- [ ] `POST /documents/:id/versions` — body `multipart/form-data` (file), 201 com nova versão completa
-- [ ] `GET /documents/:id/versions` — retorna timeline ordenada (raiz → folha) com N versões, cada uma com dados on-chain próprios
-- [ ] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes)
-- [ ] Regras:
+- [x] `POST /documents/:id/versions` — body `multipart/form-data` (file), 201 com nova versão completa
+- [x] `GET /documents/:id/versions` — retorna timeline ordenada (raiz → folha) com N versões, cada uma com dados on-chain próprios
+- [ ] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes) — pendente
+- [x] Regras:
   - Qualquer versão pode originar nova versão (permite fork/branch — ex: v1 pode ter v2a e v2b em paralelo, caso o mesmo documento seja assinado por partes diferentes)
   - Delete em qualquer versão só afeta aquela versão (soft-delete individual — não propaga pra ancestrais nem descendentes)
   - Documento-mãe soft-deleted bloqueia criação de nova versão (`404`) mas não invalida versões pré-existentes
-- [ ] Specs: documents.service.spec.ts (createVersion + listVersions), documents.controller.spec.ts (novo endpoint)
+- [x] Specs: documents.service.spec.ts (createVersion + listVersions), documents.controller.spec.ts (novo endpoint)
 
 **Timeline pro frontend futuro:**
 ```
@@ -396,26 +396,26 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
 
 **Objetivo:** Interface funcional para todas as operações do sistema.
 
-### 3.1 Setup e layout base (dia 1)
-- [ ] Tailwind CSS + shadcn/ui configurados
-- [ ] Layout raiz com sidebar/navbar
-- [ ] Rotas protegidas com middleware Next.js (redireciona para /login se sem token)
-- [ ] API client configurado (axios ou fetch wrapper com interceptors JWT)
+### 3.1 Setup e layout base (dia 1) — CONCLUÍDA
+- [x] Tailwind CSS + shadcn/ui configurados
+- [x] Layout raiz com sidebar/navbar
+- [x] Rotas protegidas com middleware Next.js (redireciona para /login se sem token)
+- [x] API client configurado (axios ou fetch wrapper com interceptors JWT)
 
-### 3.2 Autenticação (dia 1)
-- [ ] Página `/login` — formulário email + senha
-- [ ] Página `/register` — formulário de cadastro
-- [ ] axios configurado com `withCredentials: true` (cookie enviado automaticamente)
-- [ ] Zustand store guarda apenas user metadata; hidrata via `GET /auth/me` após login
-- [ ] Logout via `POST /auth/logout` (backend apaga cookie)
+### 3.2 Autenticação (dia 1) — CONCLUÍDA
+- [x] Página `/login` — formulário email + senha
+- [x] Página `/register` — formulário de cadastro
+- [x] axios configurado com `withCredentials: true` (cookie enviado automaticamente)
+- [x] Zustand store guarda apenas user metadata; hidrata via `GET /auth/me` após login
+- [x] Logout via `POST /auth/logout` (backend apaga cookie)
 
-### 3.3 Dashboard (dia 2)
-- [ ] Página `/dashboard` — lista de documentos do usuário
+### 3.3 Dashboard (dia 2) — CONCLUÍDA
+- [x] Página `/dashboard` — lista de documentos do usuário
   - Tabela com: nome, hash (truncado), status, data, ações
   - Badges de status: PENDING (amarelo), CONFIRMED (verde), FAILED (vermelho)
   - Link para detalhe
   - Botão de upload rápido
-- [ ] Cards de estatísticas: total documentos, confirmados, pendentes
+- [x] Cards de estatísticas: total documentos, confirmados, pendentes
 
 ### 3.4 Upload (dia 2)
 - [ ] Página `/upload`
@@ -479,6 +479,65 @@ Executar o fluxo completo via browser:
 
 ---
 
+## Fase 5 — Requisitos PAC VIII / Portfólio (linha Web)
+
+**Objetivo:** cumprir os requisitos obrigatórios do Portfolio Playbook (linha Web). Sem eles o projeto não habilita para o Demo Day. Entrega final: 30/11/2026.
+
+### 5.1 CI/CD (GitHub Actions)
+- [x] Workflow `.github/workflows/ci.yml` — roda em PR e push na `main`
+  - Contracts: `hardhat compile` + `hardhat test`
+  - API: `prisma generate` + lint + `nest build` + `jest --coverage` (threshold 75%) + artifact `lcov.info`
+  - Web: `next lint` + `next build`
+  - Audit: `npm audit --omit=dev --audit-level=high` nos 3 projetos (não bloqueante)
+- [x] Dependabot (`.github/dependabot.yml`) — npm nos 3 projetos + github-actions (RFC 6.1 A06)
+- [ ] Atualizar deps com vulnerabilidades high/critical (API: 2 critical/15 high; web: 2 critical/20 high, inclui `next`) e tornar o audit bloqueante
+- [ ] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
+- [ ] Zerar erros de lint da API (~76, maioria `no-unsafe-*` em specs) e tornar o step bloqueante
+- [ ] Branch protection na `main` exigindo CI verde
+- [ ] CD: deploy automático após merge na `main`
+
+### 5.2 Testes frontend (mínimo 25%)
+- [ ] Configurar Jest/Vitest + Testing Library no `docchain-web`
+- [ ] Specs de componentes e store (auth, dashboard, upload, verify)
+- [ ] Incluir step de testes + coverage do web no CI
+
+### 5.3 Análise estática
+- [ ] SonarCloud conectado ao repo (consome `lcov.info` da API e do web)
+- [ ] Quality Gate visível no PR
+
+### 5.4 Hospedagem pública
+- [ ] API + PostgreSQL + web em nuvem (AWS/GCP/Azure/Hostinger) com URL pública estável
+- [ ] Variáveis de produção e segredos configurados no provedor
+
+### 5.5 Monitoramento
+- [ ] Ferramenta de observabilidade (NewRelic/Datadog/Prometheus+Grafana) apontando para `/health` e métricas da API
+
+### 5.6 Documentação
+- [ ] GitHub Wiki (requisitos, casos de uso, C4, instruções de deploy)
+
+### Pendências herdadas (RFC 1.2 promete, código não tem)
+- [ ] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4 — previsto em M2)
+- [ ] `AllExceptionsFilter` global ocultando stack trace em produção (RFC 6.1 A05, E06)
+- [ ] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2)
+- [ ] Re-registro de documento `FAILED` (RFC RN07 + E01) — hoje o rollback apaga o arquivo e não há endpoint de retry; decidir: implementar ou ajustar a RFC
+- [ ] bcrypt: RFC 6.1/6.2/6.3 diz cost 12, código usa 10 (RNF04 aceita >= 10) — alinhar
+- [ ] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10, KPI uptime) — hoje só tem postgres
+- [ ] Seed de demonstração + vídeo demo de 3 min (RFC 7.1 M4)
+- [ ] Deploy: cookie `access_token` é emitido no domínio da API; `middleware.ts` do web só enxerga o cookie se web e API compartilharem domínio-pai (ou via proxy/rewrite do Next) — definir na hospedagem
+- [x] AuditLog LOGIN/LOGOUT/REGISTER (já instrumentado no AuthService/AuthController)
+
+### Atualização da RFC (v1.2 → v1.3)
+- [ ] 2.2 Casos de uso: incluir compartilhamento por email e versionamento (escopo 2.8/2.9 aprovado pelo professor)
+- [ ] 2.3 RFs novos para share/versões; 2.5 RN03 ("não há compartilhamento") desatualizada
+- [ ] 2.6 Fora do Escopo: remover "Compartilhamento", "Notificações por email" e "export PDF" (comprovante PDF agora existe)
+- [ ] 5.2 Modelo de dados: `DocumentShare`, `previousDocumentId`, `AuditAction.SHARE`
+- [ ] 6.1 A09: incluir SHARE na lista de ações auditadas
+- [ ] 6.4 LGPD: provedor SMTP (Resend) passa a ser operador que recebe email do destinatário — atualizar "Informação sobre compartilhamento"; marcar status real dos endpoints LGPD
+- [ ] 7.1 Marcos: datas de M3 (06/09) e M4 (04/10) estouradas; M0 cita "CI básico" que só foi criado agora; "deploy preview na Vercel" — replanejar até 30/11
+- [ ] Incluir requisitos do PAC VIII (SonarCloud, monitoramento, hospedagem, testes web 25%)
+
+---
+
 ## Estimativa Total
 
 | Fase | Tempo | Status |
@@ -486,9 +545,10 @@ Executar o fluxo completo via browser:
 | Fase 0 — Setup | 1 dia | Concluída |
 | Fase 1 — Smart Contract | 2 dias | Concluída |
 | Fase 2 — Backend | 5 dias | Concluída |
-| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Não iniciado |
-| Fase 3 — Frontend | 4 dias | Não iniciado |
+| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Concluída (falta `includeVersions` e ajuste do rate limit) |
+| Fase 3 — Frontend | 4 dias | Em andamento (3.1–3.3 concluídas) |
 | Fase 4 — Integração | 2 dias | Não iniciado |
-| **Total** | **~16 dias úteis** | |
+| Fase 5 — Requisitos PAC VIII | 4 dias | Em andamento (CI criado) |
+| **Total** | **~20 dias úteis** | |
 
 > Com sessões focadas de Claude Code, cada fase pode ser comprimida. O backend é a fase mais densa — reserve mais tempo se for a primeira vez com NestJS.
