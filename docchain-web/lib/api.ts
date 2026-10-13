@@ -21,7 +21,7 @@ api.interceptors.response.use(
       window.location.pathname.startsWith('/verify');
 
     if (status === 401 && !isAuthEndpoint && !isPublicPage) {
-      window.location.href = '/login';
+      window.location.href = '/login?expirada=1';
     }
     return Promise.reject(error);
   },

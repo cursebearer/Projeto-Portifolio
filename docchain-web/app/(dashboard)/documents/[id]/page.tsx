@@ -8,6 +8,7 @@ import { ArrowLeft, Download, FileQuestion } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeleteDocumentDialog } from '@/components/document-detail/DeleteDocumentDialog';
 import { DetailCard, MetadataCard, ProofCard } from '@/components/document-detail/InfoCards';
+import { RetryCard } from '@/components/document-detail/RetryCard';
 import { ShareDialog } from '@/components/document-detail/ShareDialog';
 import { VerifyIntegrityCard } from '@/components/document-detail/VerifyIntegrityCard';
 import { VersionsCard } from '@/components/document-detail/VersionsCard';
@@ -144,6 +145,9 @@ export default function DocumentDetailPage() {
         <div className="space-y-5">
           <MetadataCard document={doc} ownerName={user?.name ?? user?.email ?? 'Você'} />
           <ProofCard document={doc} />
+          {doc.status === 'FAILED' && (
+            <RetryCard document={doc} onRetried={(document) => setState({ kind: 'loaded', document })} />
+          )}
           {confirmed && <VerifyIntegrityCard expectedHash={doc.hash} />}
         </div>
 

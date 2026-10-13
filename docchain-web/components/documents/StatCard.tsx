@@ -1,17 +1,19 @@
 import { cn } from '@/lib/utils';
 
-type Tone = 'default' | 'success' | 'warning';
+type Tone = 'default' | 'success' | 'warning' | 'danger';
 
 const TONE_BORDER: Record<Tone, string> = {
   default: 'border-l-primary',
   success: 'border-l-success',
   warning: 'border-l-warning',
+  danger: 'border-l-destructive',
 };
 
 const TONE_VALUE: Record<Tone, string> = {
   default: 'text-foreground',
   success: 'text-success',
   warning: 'text-warning',
+  danger: 'text-destructive',
 };
 
 interface StatCardProps {

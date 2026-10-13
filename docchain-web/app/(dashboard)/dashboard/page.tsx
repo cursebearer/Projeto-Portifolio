@@ -100,7 +100,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total de Documentos"
           value={stats?.total ?? '—'}
@@ -111,9 +111,14 @@ export default function DashboardPage() {
           tone="success"
         />
         <StatCard
-          label="Pendentes"
+          label="Em andamento"
           value={stats?.pending ?? '—'}
           tone="warning"
+        />
+        <StatCard
+          label="Com falha"
+          value={stats?.failed ?? '—'}
+          tone="danger"
         />
       </div>
 

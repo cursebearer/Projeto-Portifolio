@@ -160,21 +160,29 @@ export class DocumentsService {
     const existing = await this.prisma.document.findUnique({
       where: { hash },
     });
-    if (existing && !existing.deletedAt) {
+    // RN07: documento FAILED do próprio usuário pode ser reenviado (reaproveita a linha, hash é único).
+    const isRetry =
+      existing?.status === DocumentStatus.FAILED && existing.userId === userId;
+    if (existing && !isRetry) {
       throw new ConflictException('Documento com este hash já registrado.');
     }
 
-    const document = await this.prisma.document.create({
-      data: {
-        userId,
-        fileName: file.originalname,
-        mimeType: file.mimetype,
-        fileSize: file.size,
-        hash,
-        status: DocumentStatus.PROCESSING,
-        previousDocumentId,
-      },
-    });
+    const fields = {
+      fileName: file.originalname,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      status: DocumentStatus.PROCESSING,
+      previousDocumentId:
+        previousDocumentId ?? existing?.previousDocumentId ?? null,
+    };
+    const document = isRetry
+      ? await this.prisma.document.update({
+          where: { id: existing.id },
+          data: { ...fields, errorMessage: null, deletedAt: null },
+        })
+      : await this.prisma.document.create({
+          data: { ...fields, userId, hash },
+        });
 
     try {
       const encrypted = this.crypto.encrypt(file.buffer);

@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AccountService } from './account.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionRenewalInterceptor } from './session-renewal.interceptor';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -24,7 +26,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AccountService, JwtStrategy],
+  providers: [
+    AuthService,
+    AccountService,
+    JwtStrategy,
+    { provide: APP_INTERCEPTOR, useClass: SessionRenewalInterceptor },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

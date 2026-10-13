@@ -239,15 +239,53 @@ describe('DocumentsService', () => {
       expect(blockchain.registerDocument).not.toHaveBeenCalled();
     });
 
-    it('permite re-upload se hash pertence a doc soft-deleted', async () => {
+    it('hash de documento excluído (já registrado on-chain) → 409', async () => {
       prisma.document.findUnique.mockResolvedValue({
         ...baseDoc,
+        status: DocumentStatus.CONFIRMED,
         deletedAt: new Date(),
       });
-      prisma.document.create.mockResolvedValue(baseDoc);
+
+      await expect(service.create(userId, file)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(prisma.document.create).not.toHaveBeenCalled();
+    });
+
+    it('RN07: reenvio de documento FAILED do próprio usuário reaproveita a linha', async () => {
+      prisma.document.findUnique.mockResolvedValue({
+        ...baseDoc,
+        status: DocumentStatus.FAILED,
+        errorMessage: 'timeout',
+        deletedAt: new Date(),
+      });
       prisma.document.update.mockResolvedValue(baseDoc);
 
       await expect(service.create(userId, file)).resolves.toBeDefined();
+
+      expect(prisma.document.create).not.toHaveBeenCalled();
+      expect(prisma.document.update).toHaveBeenNthCalledWith(1, {
+        where: { id: baseDoc.id },
+        data: expect.objectContaining({
+          status: DocumentStatus.PROCESSING,
+          errorMessage: null,
+          deletedAt: null,
+        }) as unknown,
+      });
+      expect(blockchain.registerDocument).toHaveBeenCalled();
+    });
+
+    it('RN07: documento FAILED de outro usuário não pode ser reenviado → 409', async () => {
+      prisma.document.findUnique.mockResolvedValue({
+        ...baseDoc,
+        userId: 'outro-user',
+        status: DocumentStatus.FAILED,
+      });
+
+      await expect(service.create(userId, file)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(prisma.document.update).not.toHaveBeenCalled();
     });
 
     it('rollback em falha do blockchain → apaga file + status FAILED + rethrow', async () => {
@@ -318,7 +356,12 @@ describe('DocumentsService', () => {
         skip: 0,
         take: 20,
       });
-      expect(result).toEqual({ items: [baseDoc], total: 1, page: 1, limit: 20 });
+      expect(result).toEqual({
+        items: [baseDoc],
+        total: 1,
+        page: 1,
+        limit: 20,
+      });
     });
 
     it('filtro por status aplica no where', async () => {
@@ -363,17 +406,17 @@ describe('DocumentsService', () => {
     it('404 quando não encontra (evita vazar existência)', async () => {
       prisma.document.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findOne(userId, 'doc-outro'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(userId, 'doc-outro')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('404 quando doc pertence a outro user', async () => {
       prisma.document.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findOne(userId, 'doc-1'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(userId, 'doc-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -413,9 +456,9 @@ describe('DocumentsService', () => {
     it('404 se doc não pertence ao user', async () => {
       prisma.document.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.remove(userId, 'ghost'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(userId, 'ghost')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(storage.delete).not.toHaveBeenCalled();
     });
   });
@@ -450,18 +493,18 @@ describe('DocumentsService', () => {
         status: DocumentStatus.PROCESSING,
       });
 
-      await expect(
-        service.download(userId, 'doc-1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.download(userId, 'doc-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(storage.retrieve).not.toHaveBeenCalled();
     });
 
     it('404 se doc não pertence ao user', async () => {
       prisma.document.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.download(userId, 'ghost'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.download(userId, 'ghost')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -619,9 +662,9 @@ describe('DocumentsService', () => {
     it('404 se doc não pertence ao user', async () => {
       prisma.document.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.findVersions(userId, 'root'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findVersions(userId, 'root')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

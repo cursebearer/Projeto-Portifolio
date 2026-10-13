@@ -95,17 +95,19 @@ export interface DocumentStats {
   total: number;
   confirmed: number;
   pending: number;
+  failed: number;
 }
 
 export async function getDocumentStats(): Promise<DocumentStats> {
-  const [all, confirmed, pending] = await Promise.all([
+  const [all, confirmed, failed] = await Promise.all([
     listDocuments({ limit: 1 }),
     listDocuments({ status: 'CONFIRMED', limit: 1 }),
-    listDocuments({ status: 'PENDING', limit: 1 }),
+    listDocuments({ status: 'FAILED', limit: 1 }),
   ]);
   return {
     total: all.total,
     confirmed: confirmed.total,
-    pending: pending.total,
+    failed: failed.total,
+    pending: Math.max(0, all.total - confirmed.total - failed.total),
   };
 }

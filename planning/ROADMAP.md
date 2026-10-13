@@ -464,10 +464,10 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
 - [x] Página `/conta`: editar nome, exportar dados, excluir conta
 - [x] Backend: `PATCH /auth/me`, `GET /auth/me/export`, `DELETE /auth/me` (RFC 6.4)
 
-### 3.10 Ajustes de UX
-- [ ] Aviso/renovação de sessão (JWT de 15 min)
-- [ ] Cards do dashboard contemplando documentos FAILED
-- [ ] Reenviar documento FAILED (RN07)
+### 3.10 Ajustes de UX — CONCLUÍDA
+- [x] Sessão deslizante: `SessionRenewalInterceptor` reemite o cookie (15 min) quando o token passou da metade da validade; inatividade de 15 min continua expirando. Login avisa "sessão expirou" (`?expirada=1`)
+- [x] Cards do dashboard: Total, Confirmados, Em andamento (total − confirmados − falhos) e Com falha
+- [x] Reenviar documento FAILED (RN07): `POST /documents` com o mesmo arquivo reaproveita a linha FAILED do próprio usuário; detalhe do documento mostra card de reenvio (confere o hash no navegador). Corrige 500 ao reenviar hash de documento excluído (agora 409)
 
 ### Critério de conclusão da Fase 3
 ```
@@ -541,7 +541,7 @@ Executar o fluxo completo via browser:
 - [x] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4) — feito na Fase 3.9
 - [ ] `AllExceptionsFilter` global ocultando stack trace em produção (RFC 6.1 A05, E06)
 - [ ] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2)
-- [ ] Re-registro de documento `FAILED` (RFC RN07 + E01) — hoje o rollback apaga o arquivo e não há endpoint de retry; decidir: implementar ou ajustar a RFC
+- [x] Re-registro de documento `FAILED` (RFC RN07) — feito na Fase 3.10 (reenvio do mesmo arquivo; E01 da RFC segue divergente: o rollback apaga o arquivo cifrado — ajustar texto da RFC)
 - [ ] bcrypt: RFC 6.1/6.2/6.3 diz cost 12, código usa 10 (RNF04 aceita >= 10) — alinhar
 - [ ] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10, KPI uptime) — hoje só tem postgres
 - [ ] Seed de demonstração + vídeo demo de 3 min (RFC 7.1 M4)
