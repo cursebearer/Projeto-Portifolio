@@ -7,6 +7,17 @@ export function formatBytes(bytes: number): string {
   return `${(mb / 1024).toFixed(2)} GB`;
 }
 
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function with0x(hash: string): string {
   return hash.startsWith('0x') ? hash : `0x${hash}`;
 }

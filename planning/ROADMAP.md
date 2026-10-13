@@ -425,14 +425,17 @@ v1 (original)        → hash abc... → tx1 (bloco 1000, 25/08 15:30)
   - Estados: idle → uploading → processing → confirmed/error
   - Exibe hash gerado e tx_hash após confirmação
 
-### 3.5 Detalhe do documento (dia 3)
-- [ ] Página `/documents/[id]`
+### 3.5 Detalhe do documento (dia 3) — CONCLUÍDA
+- [x] Página `/documents/[id]`
   - Todos os metadados do documento
   - Link para tx no Etherscan Sepolia (abre em nova aba)
   - Botão "Verificar Integridade" — abre dropzone inline
   - Resultado da verificação com ícone visual (check verde / x vermelho)
   - Botão de download (arquivo descriptografado)
   - Botão "Excluir" → AlertDialog com aviso "registro on-chain permanece imutável" → `DELETE /documents/:id` (RF22-24)
+  - Verificação de integridade calcula o SHA-256 no navegador (Web Crypto) e confirma on-chain via `POST /documents/verify`
+  - Compartilhar por email (dialog → `POST /documents/:id/share`) e versões (lista + nova versão → `POST /documents/:id/versions`)
+  - Linha do tempo usa datas do documento (não há endpoint de audit por documento)
 
 ### 3.6 Verificação pública (dia 3-4)
 - [ ] Página `/verify` — verificação sem autenticação
