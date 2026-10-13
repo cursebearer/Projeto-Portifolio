@@ -1,3 +1,10 @@
+import { PublicLayout } from '@/components/verify/PublicLayout';
+import { PublicVerify } from '@/components/verify/PublicVerify';
+
 export default function VerifyPage() {
-  return <div>Verify</div>;
+  return (
+    <PublicLayout>
+      <PublicVerify />
+    </PublicLayout>
+  );
 }
