@@ -3,19 +3,40 @@ updates:
   - package-ecosystem: npm
     directory: /docchain-api
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      api:
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: npm
     directory: /docchain-web
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      web:
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: npm
     directory: /docchain-contracts
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      contracts:
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      github-actions:
+        patterns: ['*']
