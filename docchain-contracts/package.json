@@ -21,9 +21,9 @@
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
-    "dotenv": "^17.3.1",
-    "ethers": "^6.16.0",
-    "hardhat": "^2.28.6",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "hardhat": "^2.29.1",
     "solidity-coverage": "^0.8.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
