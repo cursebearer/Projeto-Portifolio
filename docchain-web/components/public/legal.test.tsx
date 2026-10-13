@@ -10,6 +10,7 @@ describe('páginas legais', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Política de Privacidade' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'O que vai para a blockchain' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Minha conta' })).toHaveAttribute('href', '/conta');
+    expect(screen.getByRole('link', { name: 'docchain@gmail.com' })).toHaveAttribute('href', 'mailto:docchain@gmail.com');
   });
 
   it('termos deixam claro o que a verificação não prova', () => {
