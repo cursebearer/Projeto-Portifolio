@@ -351,7 +351,7 @@ describe('DocumentsService', () => {
       const result = await service.findAll(userId, {});
 
       expect(prisma.document.findMany).toHaveBeenCalledWith({
-        where: { userId, deletedAt: null },
+        where: { userId, deletedAt: null, previousDocumentId: null },
         orderBy: { uploadedAt: 'desc' },
         skip: 0,
         take: 20,
@@ -388,6 +388,30 @@ describe('DocumentsService', () => {
       expect(prisma.document.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 20, take: 10 }),
       );
+    });
+
+    it('default filtra só raízes (previousDocumentId: null)', async () => {
+      prisma.document.findMany.mockResolvedValue([]);
+      prisma.document.count.mockResolvedValue(0);
+
+      await service.findAll(userId, {});
+
+      expect(prisma.document.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ previousDocumentId: null }),
+        }),
+      );
+    });
+
+    it('includeVersions=true remove filtro previousDocumentId', async () => {
+      prisma.document.findMany.mockResolvedValue([]);
+      prisma.document.count.mockResolvedValue(0);
+
+      await service.findAll(userId, { includeVersions: true });
+
+      const call = prisma.document.findMany.mock.calls[0][0];
+      expect(call.where.previousDocumentId).toBeUndefined();
+      expect(call.where).toEqual({ userId, deletedAt: null });
     });
   });
 

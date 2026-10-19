@@ -18,4 +18,17 @@ describe('getDocumentStats', () => {
 
     await expect(getDocumentStats()).resolves.toEqual({ total: 8, confirmed: 5, failed: 2, pending: 1 });
   });
+
+  it('stats consultam com includeVersions=true (contadores incluem versões)', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [], total: 0, page: 1, limit: 1 },
+    });
+
+    await getDocumentStats();
+
+    for (const call of vi.mocked(api.get).mock.calls) {
+      const params = call[1]?.params as { includeVersions?: boolean };
+      expect(params.includeVersions).toBe(true);
+    }
+  });
 });

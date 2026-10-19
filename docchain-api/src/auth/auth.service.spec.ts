@@ -66,7 +66,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('cria usuário com senha hasheada (bcrypt 10 rounds)', async () => {
+    it('cria usuário com senha hasheada (bcrypt 12 rounds)', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue(userRow);
       bcryptHash.mockResolvedValue('hashed-pw');
@@ -77,7 +77,7 @@ describe('AuthService', () => {
         name: 'Rafa',
       });
 
-      expect(bcryptHash).toHaveBeenCalledWith('senha-forte-123', 10);
+      expect(bcryptHash).toHaveBeenCalledWith('senha-forte-123', 12);
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
           email: 'rafa@example.com',

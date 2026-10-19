@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
@@ -9,6 +9,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { CommonModule } from './common/common.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { CryptoModule } from './crypto/crypto.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
@@ -29,6 +30,7 @@ import { VerificationModule } from './verification/verification.module';
         JWT_EXPIRES_IN: Joi.string().default('15m'),
         ENCRYPTION_KEY: Joi.string().length(64).required(),
         RPC_URL: Joi.string().uri().required(),
+        RPC_FALLBACK_URLS: Joi.string().allow('').default(''),
         PRIVATE_KEY: Joi.string().required(),
         CONTRACT_ADDRESS: Joi.string().required(),
         NETWORK: Joi.string().default('sepolia'),
@@ -82,6 +84,7 @@ import { VerificationModule } from './verification/verification.module';
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}
