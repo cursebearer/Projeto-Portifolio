@@ -100,9 +100,9 @@ export interface DocumentStats {
 
 export async function getDocumentStats(): Promise<DocumentStats> {
   const [all, confirmed, failed] = await Promise.all([
-    listDocuments({ limit: 1 }),
-    listDocuments({ status: 'CONFIRMED', limit: 1 }),
-    listDocuments({ status: 'FAILED', limit: 1 }),
+    listDocuments({ limit: 1, includeVersions: true }),
+    listDocuments({ status: 'CONFIRMED', limit: 1, includeVersions: true }),
+    listDocuments({ status: 'FAILED', limit: 1, includeVersions: true }),
   ]);
   return {
     total: all.total,

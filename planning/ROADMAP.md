@@ -180,7 +180,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
   - [x] Balance check do signer antes de tx (warn se < 0.001 ETH)
   - [ ] Event parser opcional de `DocumentRegistered` — decidido não implementar (2ª call `verifyDocument` já cobre e é mais explícita)
   - [ ] Teste de integração real contra Sepolia OU Hardhat fork — **deferido pra Fase 4** (integração)
-- [ ] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED — **deferido pra Fase 4** (precisa Sepolia real ou Hardhat fork rodando)
+- [x] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED — spec em `docchain-api/test/documents.hardhat.e2e-spec.ts`, gated por `E2E_HARDHAT=1`; setup em `docchain-api/test/README.md`
 
 ### Critério de conclusão da Fase 2
 ```
@@ -358,7 +358,7 @@ Escopo aprovado com o professor após apresentação da Fase 2. Amplia o backend
   5. `AuditLog.log(UPLOAD)` com metadata `{ versionOf: previousDocId }`
 - [x] `POST /documents/:id/versions` — body `multipart/form-data` (file), 201 com nova versão completa
 - [x] `GET /documents/:id/versions` — retorna timeline ordenada (raiz → folha) com N versões, cada uma com dados on-chain próprios
-- [ ] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes) — pendente
+- [x] Ajustar `GET /documents` — filtro opcional `?includeVersions=true` (default false, retorna só raízes); `getDocumentStats` do web passa `includeVersions=true` nos contadores
 - [x] Regras:
   - Qualquer versão pode originar nova versão (permite fork/branch — ex: v1 pode ter v2a e v2b em paralelo, caso o mesmo documento seja assinado por partes diferentes)
   - Delete em qualquer versão só afeta aquela versão (soft-delete individual — não propaga pra ancestrais nem descendentes)
@@ -490,6 +490,7 @@ Executar o fluxo completo via browser:
 - [ ] Variáveis de ambiente de produção configuradas
 - [ ] Seed de dados para demonstração
 - [ ] Testar fluxo completo no ambiente containerizado
+- [x] E2E do fluxo POST /documents → CONFIRMED com Hardhat local — spec gated por `E2E_HARDHAT=1` em `docchain-api/test/documents.hardhat.e2e-spec.ts`; falta integrar no CI
 
 ### 4.2 Documentação do TCC (dia 2)
 - [ ] README de cada repositório com instruções de setup
@@ -539,10 +540,10 @@ Executar o fluxo completo via browser:
 
 ### Pendências herdadas (RFC 1.2 promete, código não tem)
 - [x] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4) — feito na Fase 3.9
-- [ ] `AllExceptionsFilter` global ocultando stack trace em produção (RFC 6.1 A05, E06)
-- [ ] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2)
+- [x] `AllExceptionsFilter` global ocultando stack trace em produção (RFC 6.1 A05, E06)
+- [x] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2) — 3 tentativas, backoff 0/500/1500ms, rotação de RPCs via `RPC_FALLBACK_URLS` (CSV); reverts do contrato não retriam
 - [x] Re-registro de documento `FAILED` (RFC RN07) — feito na Fase 3.10 (reenvio do mesmo arquivo; E01 da RFC segue divergente: o rollback apaga o arquivo cifrado — ajustar texto da RFC)
-- [ ] bcrypt: RFC 6.1/6.2/6.3 diz cost 12, código usa 10 (RNF04 aceita >= 10) — alinhar
+- [x] bcrypt: cost 12 (alinhado com RFC 6.1/6.2/6.3; RNF04 aceita >=10)
 - [ ] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10, KPI uptime) — hoje só tem postgres
 - [ ] Seed de demonstração + vídeo demo de 3 min (RFC 7.1 M4)
 - [ ] Deploy: cookie `access_token` é emitido no domínio da API; `middleware.ts` do web só enxerga o cookie se web e API compartilharem domínio-pai (ou via proxy/rewrite do Next) — definir na hospedagem
@@ -567,7 +568,7 @@ Executar o fluxo completo via browser:
 | Fase 0 — Setup | 1 dia | Concluída |
 | Fase 1 — Smart Contract | 2 dias | Concluída |
 | Fase 2 — Backend | 5 dias | Concluída |
-| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Concluída (falta `includeVersions` e ajuste do rate limit) |
+| Fase 2.8/2.9 — Extensões (share + versões) | 2 dias | Concluída |
 | Fase 3 — Frontend | 4 dias | Concluída (3.1–3.7) |
 | Fase 4 — Integração | 2 dias | Não iniciado |
 | Fase 5 — Requisitos PAC VIII | 4 dias | Em andamento (CI criado) |

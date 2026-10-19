@@ -54,10 +54,11 @@ export class DocumentsService {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where = {
+    const where: Prisma.DocumentWhereInput = {
       userId,
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.includeVersions ? {} : { previousDocumentId: null }),
     };
 
     const [items, total] = await Promise.all([

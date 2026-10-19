@@ -37,6 +37,7 @@ export interface ListDocumentsQuery {
   page?: number;
   limit?: number;
   status?: DocumentStatus;
+  includeVersions?: boolean;
 }
 
 export interface VerifyResult {

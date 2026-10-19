@@ -25,7 +25,7 @@ export interface LoginResult {
   user: AuthenticatedUser;
 }
 
-const BCRYPT_ROUNDS = 10;
+const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {

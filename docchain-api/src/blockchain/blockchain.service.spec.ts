@@ -303,9 +303,65 @@ describe('BlockchainService', () => {
       await expect(service.getBlockNumber()).resolves.toBe(42);
     });
 
-    it('propaga erro do provider', async () => {
-      providerMock.getBlockNumber.mockRejectedValueOnce(new Error('rpc down'));
+    it('propaga erro do provider após esgotar retries', async () => {
+      providerMock.getBlockNumber.mockRejectedValue(new Error('rpc down'));
       await expect(service.getBlockNumber()).rejects.toThrow('rpc down');
+    });
+  });
+
+  describe('retry com fallback RPC', () => {
+    it('registerDocument: retry em erro de rede (2 fails + success)', async () => {
+      const waitMock = jest.fn().mockResolvedValue({
+        hash: '0xtx',
+        blockNumber: 7,
+      });
+      contractMock.registerDocument
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockRejectedValueOnce(new Error('socket hang up'))
+        .mockResolvedValueOnce({ wait: waitMock });
+
+      const result = await service.registerDocument(validHash, 'ref');
+
+      expect(contractMock.registerDocument).toHaveBeenCalledTimes(3);
+      expect(result.txHash).toBe('0xtx');
+    });
+
+    it('registerDocument: 3 falhas de rede → InternalServerError', async () => {
+      contractMock.registerDocument.mockRejectedValue(
+        new Error('persistent rpc failure'),
+      );
+
+      await expect(
+        service.registerDocument(validHash, 'ref'),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+      expect(contractMock.registerDocument).toHaveBeenCalledTimes(3);
+    });
+
+    it('registerDocument: revert do contrato NÃO faz retry', async () => {
+      contractMock.registerDocument.mockRejectedValue({
+        revert: { name: 'DocumentAlreadyRegistered' },
+      });
+
+      await expect(
+        service.registerDocument(validHash, 'ref'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(contractMock.registerDocument).toHaveBeenCalledTimes(1);
+    });
+
+    it('verifyDocument: retry em falha transiente', async () => {
+      contractMock.verifyDocument
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockResolvedValueOnce({
+          documentHash: validHashPrefixed,
+          storageRef: 'ref',
+          registeredBy: '0xowner',
+          timestamp: 1n,
+          exists: true,
+        });
+
+      const result = await service.verifyDocument(validHash);
+      expect(result.exists).toBe(true);
+      expect(contractMock.verifyDocument).toHaveBeenCalledTimes(2);
     });
   });
 
