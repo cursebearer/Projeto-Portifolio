@@ -525,8 +525,8 @@ Executar o fluxo completo via browser:
 - [x] Incluir step de testes + coverage do web no CI
 
 ### 5.3 Análise estática
-- [ ] SonarCloud conectado ao repo — `sonar-project.properties` e job no CI prontos; falta importar o projeto no SonarCloud e criar o secret `SONAR_TOKEN`
-- [ ] Quality Gate visível no PR
+- [x] SonarCloud conectado ao repo (org `cursebearer`, projeto `cursebearer_Projeto-Portifolio`), cobertura combinada 79,1% em 03/11
+- [x] Quality Gate visível no PR (job SonarCloud espera o resultado)
 
 ### 5.4 Hospedagem pública
 - [ ] API + PostgreSQL + web em nuvem (AWS/GCP/Azure/Hostinger) com URL pública estável
