@@ -98,22 +98,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      E2E_HARDHAT: '1'
-      DATABASE_URL: postgresql://docchain:docchain@localhost:5432/docchain_e2e?schema=public
-      RPC_URL: http://127.0.0.1:8545
-      # Conta #0 determinística do Hardhat (pública, só existe na chain local)
-      PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
-      # Primeiro deploy da conta #0 sempre cai neste endereço
-      CONTRACT_ADDRESS: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
-      NETWORK: localhost
-      JWT_SECRET: ci-e2e-jwt-secret-com-mais-de-32-caracteres
-      ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000001'
-      SMTP_HOST: smtp.example
-      SMTP_USER: x
-      SMTP_PASSWORD: x
-      SMTP_FROM: noreply@example.com
-      UPLOAD_DIR: ./uploads-e2e
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -132,6 +116,22 @@ jobs:
           npx hardhat run scripts/deploy.ts --network localhost
       - name: Migrations + E2E
         working-directory: docchain-api
+        env:
+          E2E_HARDHAT: '1'
+          DATABASE_URL: postgresql://docchain:docchain@localhost:5432/docchain_e2e?schema=public
+          RPC_URL: http://127.0.0.1:8545
+          # Conta #0 determinística do Hardhat (pública, só existe na chain local)
+          PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+          # Primeiro deploy da conta #0 sempre cai neste endereço
+          CONTRACT_ADDRESS: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+          NETWORK: localhost
+          JWT_SECRET: ci-e2e-jwt-secret-com-mais-de-32-caracteres
+          ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000001'
+          SMTP_HOST: smtp.example
+          SMTP_USER: x
+          SMTP_PASSWORD: x
+          SMTP_FROM: noreply@example.com
+          UPLOAD_DIR: ./uploads-e2e
         run: |
           npm ci
           npx prisma generate
