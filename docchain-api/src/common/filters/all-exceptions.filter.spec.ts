@@ -1,6 +1,7 @@
 import {
   ArgumentsHost,
   BadRequestException,
+  ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter';
@@ -70,5 +71,22 @@ describe('AllExceptionsFilter', () => {
   it('exceção não-Error (string/number) retorna 500', () => {
     filter.catch('string errada', host);
     expect(statusMock).toHaveBeenCalledWith(500);
+  });
+
+  it('preserva campos extras do payload da HttpException', () => {
+    const exc = new ConflictException({
+      statusCode: 409,
+      message: 'duplicado',
+      error: 'DOCUMENT_ALREADY_REGISTERED',
+      hash: 'deadbeef',
+      verifyUrl: '/verify/deadbeef',
+    });
+
+    filter.catch(exc, host);
+
+    const body = jsonMock.mock.calls[0][0];
+    expect(body.hash).toBe('deadbeef');
+    expect(body.verifyUrl).toBe('/verify/deadbeef');
+    expect(body.error).toBe('DOCUMENT_ALREADY_REGISTERED');
   });
 });

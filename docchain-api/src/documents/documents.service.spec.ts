@@ -239,6 +239,55 @@ describe('DocumentsService', () => {
       expect(blockchain.registerDocument).not.toHaveBeenCalled();
     });
 
+    it('duplicado (outro usuário): payload inclui hash + verifyUrl + walletAddress + isOwner false', async () => {
+      const existing = {
+        ...baseDoc,
+        userId: 'other-user',
+        status: DocumentStatus.CONFIRMED,
+        confirmedAt: new Date('2026-01-15T10:00:00Z'),
+        walletAddress: '0xDeadBeef00000000000000000000000000000000',
+      };
+      prisma.document.findUnique.mockResolvedValue(existing);
+
+      try {
+        await service.create(userId, file);
+        fail('deveria lançar');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ConflictException);
+        const body = (err as ConflictException).getResponse() as Record<
+          string,
+          unknown
+        >;
+        expect(body.error).toBe('DOCUMENT_ALREADY_REGISTERED');
+        expect(body.hash).toBe(existing.hash);
+        expect(body.verifyUrl).toBe(`/verify/${existing.hash}`);
+        expect(body.walletAddress).toBe(existing.walletAddress);
+        expect(body.isOwner).toBe(false);
+        expect(body.message).toContain('já foi registrado');
+      }
+    });
+
+    it('duplicado (mesmo usuário): isOwner true + mensagem orienta criar versão', async () => {
+      const existing = {
+        ...baseDoc,
+        status: DocumentStatus.CONFIRMED,
+        confirmedAt: new Date('2026-01-15T10:00:00Z'),
+      };
+      prisma.document.findUnique.mockResolvedValue(existing);
+
+      try {
+        await service.create(userId, file);
+        fail('deveria lançar');
+      } catch (err) {
+        const body = (err as ConflictException).getResponse() as Record<
+          string,
+          unknown
+        >;
+        expect(body.isOwner).toBe(true);
+        expect(body.message).toContain('Você já registrou');
+      }
+    });
+
     it('hash de documento excluído (já registrado on-chain) → 409', async () => {
       prisma.document.findUnique.mockResolvedValue({
         ...baseDoc,
@@ -344,24 +393,42 @@ describe('DocumentsService', () => {
   });
 
   describe('findAll', () => {
-    it('paginação default: page 1 limit 20', async () => {
-      prisma.document.findMany.mockResolvedValue([baseDoc]);
+    it('paginação default: page 1 limit 20 + versionCount na raiz sem filhos', async () => {
+      prisma.document.findMany
+        .mockResolvedValueOnce([baseDoc])
+        .mockResolvedValueOnce([]);
       prisma.document.count.mockResolvedValue(1);
 
       const result = await service.findAll(userId, {});
 
-      expect(prisma.document.findMany).toHaveBeenCalledWith({
+      expect(prisma.document.findMany).toHaveBeenNthCalledWith(1, {
         where: { userId, deletedAt: null, previousDocumentId: null },
         orderBy: { uploadedAt: 'desc' },
         skip: 0,
         take: 20,
       });
       expect(result).toEqual({
-        items: [baseDoc],
+        items: [{ ...baseDoc, versionCount: 0 }],
         total: 1,
         page: 1,
         limit: 20,
       });
+    });
+
+    it('versionCount: BFS conta descendentes recursivamente', async () => {
+      const root = { ...baseDoc, id: 'root' };
+      const v2 = { ...baseDoc, id: 'v2', previousDocumentId: 'root' };
+      const v3 = { ...baseDoc, id: 'v3', previousDocumentId: 'v2' };
+      prisma.document.findMany
+        .mockResolvedValueOnce([root])
+        .mockResolvedValueOnce([{ id: v2.id, previousDocumentId: 'root' }])
+        .mockResolvedValueOnce([{ id: v3.id, previousDocumentId: 'v2' }])
+        .mockResolvedValueOnce([]);
+      prisma.document.count.mockResolvedValue(1);
+
+      const result = await service.findAll(userId, {});
+
+      expect(result.items[0].versionCount).toBe(2);
     });
 
     it('filtro por status aplica no where', async () => {

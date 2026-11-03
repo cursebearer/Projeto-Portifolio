@@ -24,6 +24,17 @@ export interface DocumentDto {
   updatedAt: string;
   deletedAt: string | null;
   previousDocumentId: string | null;
+  versionCount?: number;
+}
+
+export interface DuplicateDocumentError {
+  error: 'DOCUMENT_ALREADY_REGISTERED';
+  message: string;
+  hash: string;
+  registeredAt: string;
+  walletAddress: string | null;
+  verifyUrl: string;
+  isOwner: boolean;
 }
 
 export interface PaginatedDocuments {
