@@ -1,8 +1,8 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { randomUUID, createHash } from 'crypto';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 

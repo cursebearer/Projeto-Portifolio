@@ -15,6 +15,7 @@ interface ErrorResponseBody {
   path: string;
   timestamp: string;
   stack?: string;
+  [key: string]: unknown;
 }
 
 @Catch()
@@ -34,8 +35,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const httpBody = isHttp ? exception.getResponse() : null;
     const payloadMessage = this.extractMessage(httpBody, exception, status);
     const payloadError = this.extractError(httpBody, status);
+    const extras = this.extractExtras(httpBody);
 
     const body: ErrorResponseBody = {
+      ...extras,
       statusCode: status,
       message: payloadMessage,
       error: payloadError,
@@ -84,5 +87,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (err) return err;
     }
     return HttpStatus[status] ?? 'Error';
+  }
+
+  private extractExtras(httpBody: unknown): Record<string, unknown> {
+    if (!httpBody || typeof httpBody !== 'object') return {};
+    const reserved = new Set([
+      'statusCode',
+      'message',
+      'error',
+      'path',
+      'timestamp',
+      'stack',
+    ]);
+    const extras: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(httpBody)) {
+      if (!reserved.has(key)) extras[key] = value;
+    }
+    return extras;
   }
 }
