@@ -62,4 +62,4 @@ npm run test:e2e
 
 ### CI
 
-Workflow dedicado em `.github/workflows/ci.yml` pode subir um service `postgres` e rodar `hardhat node` em background antes de disparar `test:e2e`. Hoje não está no pipeline — adicionar na Fase 4.1.
+Job `E2E (API + Hardhat)` em `.github/workflows/ci.yml`: sobe Postgres como service, roda `hardhat node` em background, faz o deploy local (o primeiro deploy da conta #0 sempre cai em `0x5FbDB2315678afecb367f032d93F642f64180aa3`), aplica as migrations e dispara o spec.

@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: docchain-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api:3000']
+    # Em produção, com METRICS_TOKEN definido na API:
+    # authorization:
+    #   type: Bearer
+    #   credentials_file: /etc/prometheus/metrics_token

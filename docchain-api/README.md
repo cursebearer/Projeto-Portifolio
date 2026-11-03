@@ -1,102 +1,88 @@
-# DocChain API
+# docchain-api
 
-Backend NestJS do DocChain — registro documental com blockchain.
+API REST do DocChain.
 
-**Stack:** NestJS 11, Prisma 6, PostgreSQL 16, bcrypt, JWT (passport-jwt), class-validator, ethers 6.
+**Stack:** NestJS 11, Prisma 6, PostgreSQL 16, ethers v6, bcrypt, passport-jwt, class-validator, prom-client, Jest.
 
 ## Setup
 
 ```bash
-npm install
-cp .env.example .env
-# edita .env — DATABASE_URL, JWT_SECRET (32+ chars), ENCRYPTION_KEY (64 hex), RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS
+npm ci
+cp .env.example .env   # ver tabela de variáveis na Wiki > Deploy
 
-# Postgres
-docker compose up -d
+# Postgres (compose da raiz do repositório)
+docker compose -f ../docker-compose.yml up -d postgres
 
-# Migrations
-npx prisma migrate dev
+npx prisma migrate deploy
+npx prisma db seed     # opcional: demo@docchain.dev / DocChain@2026
 ```
 
 ## Rodando
 
 ```bash
-# dev (watch mode)
-npm run start:dev
-
-# build de produção
-npm run build && npm run start:prod
+npm run start:dev                     # watch
+npm run build && npm run start:prod   # produção
 ```
 
-Backend sobe em `http://localhost:3000`.
+| Recurso | URL |
+| --- | --- |
+| API | http://localhost:3000 |
+| Swagger | http://localhost:3000/api/docs |
+| Health | http://localhost:3000/health |
+| Métricas Prometheus | http://localhost:3000/metrics |
 
-## Endpoints implementados (Fase 2 Sessão 1)
+## Endpoints
 
-| Método | Rota | Guarda | Descrição |
-|---|---|---|---|
-| POST | `/auth/register` | pública | Cria usuário (bcrypt) |
-| POST | `/auth/login` | pública | Valida credenciais, emite cookie httpOnly com JWT |
-| POST | `/auth/logout` | JwtAuthGuard | Limpa cookie |
-| GET | `/auth/me` | JwtAuthGuard | Retorna user autenticado |
+| Método | Rota | Auth | Descrição |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | pública | Cria usuário |
+| POST | `/auth/login` | pública | Emite cookie `access_token` (`HttpOnly`, `SameSite=Lax`, 15 min) |
+| POST | `/auth/logout` | cookie | Limpa o cookie |
+| GET | `/auth/me` | cookie | Usuário autenticado |
+| PATCH | `/auth/me` | cookie | Atualiza perfil |
+| GET | `/auth/me/export` | cookie | Exporta os dados do usuário (LGPD) |
+| DELETE | `/auth/me` | cookie | Exclui a conta (LGPD) |
+| POST | `/documents` | cookie | Upload: hash, criptografia e registro on-chain |
+| GET | `/documents` | cookie | Lista paginada (`page`, `limit`, `status`, `includeVersions`) com `versionCount` |
+| GET | `/documents/:id` | cookie | Detalhe |
+| DELETE | `/documents/:id` | cookie | Soft-delete e remoção do arquivo cifrado |
+| GET | `/documents/:id/download` | cookie | Arquivo original descriptografado |
+| POST | `/documents/:id/versions` | cookie | Nova versão ligada ao documento |
+| GET | `/documents/:id/versions` | cookie | Linha do tempo de versões |
+| POST | `/documents/:id/share` | cookie | Compartilha por email com comprovante |
+| POST | `/documents/verify` | cookie | Verificação privada reenviando o arquivo |
+| GET | `/verify/public/:hash` | pública | Verificação pública na blockchain |
+| GET | `/health` | pública | Banco e blockchain |
+| GET | `/metrics` | `METRICS_TOKEN` opcional | Métricas Prometheus |
 
-Cookie: `Set-Cookie: access_token=<jwt>; HttpOnly; SameSite=Lax; Max-Age=900` (`Secure` em produção).
+Erros seguem o formato do `AllExceptionsFilter` (`statusCode`, `message`, `error`, `path`, `timestamp`). Upload de hash já registrado retorna 409 `DOCUMENT_ALREADY_REGISTERED` com `verifyUrl`.
 
-## Testes manuais
+## Testes
 
 ```bash
-# Registrar
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"teste@x.com","password":"12345678","name":"Teste"}'
-
-# Login (salva cookie)
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"teste@x.com","password":"12345678"}' \
-  -c cookies.txt -i
-
-# Rota protegida
-curl http://localhost:3000/auth/me -b cookies.txt
-
-# Logout
-curl -X POST http://localhost:3000/auth/logout -b cookies.txt -c cookies.txt -i
-```
-
-## Inspecionar banco
-
-```bash
-npx prisma studio   # GUI em http://localhost:5555
+npm test             # unitários
+npm run test:cov     # cobertura (threshold 75%)
+E2E_HARDHAT=1 npm run test:e2e   # E2E contra Hardhat local, ver test/README.md
 ```
 
 ## Estrutura
 
 ```
 src/
-├── auth/
-│   ├── decorators/current-user.decorator.ts
-│   ├── dto/
-│   │   ├── login.dto.ts
-│   │   └── register.dto.ts
-│   ├── guards/jwt-auth.guard.ts
-│   ├── strategies/jwt.strategy.ts
-│   ├── auth.controller.ts
-│   ├── auth.module.ts
-│   └── auth.service.ts
-├── blockchain/
-│   └── abi/DocumentRegistry.json   # exportado da Fase 1
-├── prisma/
-│   ├── prisma.module.ts            # global
-│   └── prisma.service.ts
-├── app.module.ts                    # ConfigModule + Prisma + Auth
-└── main.ts                          # cookie-parser + ValidationPipe global
+├── audit/          trilha de auditoria
+├── auth/           cadastro, login, conta, LGPD
+├── blockchain/     ethers v6, retry e RPC de fallback, ABI
+├── common/         filtro global de exceções, contexto de requisição
+├── crypto/         SHA-256 e AES-256-GCM
+├── documents/      upload, listagem, versões, download, exclusão
+├── health/         health check
+├── mailer/         envio de email
+├── metrics/        Prometheus (middleware, gauge, /metrics)
+├── pdf/            comprovante em PDF com QR code
+├── prisma/         PrismaService
+├── sharing/        compartilhamento por email
+├── storage/        IStorageService e implementação local
+├── verification/   verificação pública e privada
+├── app.module.ts
+└── main.ts
 ```
-
-## Roadmap Fase 2
-
-- Sessão 1 — Prisma + AuthModule (register/login/logout/me) — CONCLUÍDA
-- Sessão 2 — CryptoService + StorageModule — CONCLUÍDA
-- Sessão 3 — BlockchainModule — CONCLUÍDA
-- Sessão 4 — DocumentsModule (upload/verify/download) — CONCLUÍDA
-- Sessão 5 — Polish (Swagger, health, rate limit, logging estruturado) — CONCLUÍDA
-
-Fase 2 completa. Ver `planning/ROADMAP.md` pra detalhes de cada sessão.

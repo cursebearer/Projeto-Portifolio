@@ -104,7 +104,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] PrismaModule global com PrismaService
 - [x] Migrations iniciais (tabelas `users`, `documents`, `audit_logs`, `verification_attempts`)
 - [x] Multer configurado para upload em memória (memoryStorage) — via `MulterModule.registerAsync` no `DocumentsModule` (Sessão 4a)
-- [ ] Pasta `/uploads` mapeada como volume — Sessão 2
+- [x] Pasta `/uploads` mapeada como volume — Sessão 2
 - [x] `cookie-parser` middleware registrado
 - [x] `ValidationPipe` global (whitelist + forbidNonWhitelisted + transform)
 - [x] Volume `uploads_data` declarado no `docker-compose.yml` (Sessão 2)
@@ -142,7 +142,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] Error mapping: `DocumentAlreadyRegistered → Conflict`, `InvalidHash/EmptyStorageRef → BadRequest`, genérico → `InternalServerError` com Logger
 - [x] Conversão hex → bytes32 + validação regex `^[a-fA-F0-9]{64}$`
 - [x] 17 testes unit (ethers mockado) — 97.87% stmts / 87.5% branch
-- [ ] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 5
+- [x] Testes de integração com contrato (Hardhat fork ou Sepolia real) — deferido pra Sessão 5 — coberto pelo E2E Hardhat (Fase 4.1)
 
 ### 2.6 DocumentsModule (dia 3-4)
 
@@ -154,7 +154,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
 - [x] `GET /documents/:id/download` — decrypt + headers (só se status CONFIRMED)
 - [x] `ListDocumentsQueryDto` (class-validator + class-transformer)
 - [x] Rollback: falha em storage/blockchain marca FAILED + apaga file + rethrow
-- [ ] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
+- [x] AuditLog UPLOAD/DELETE/DOWNLOAD — **Sessão 4b**
 
 **2.6b — Verify + Audit (Sessão 4b) — CONCLUÍDA**
 - [x] `POST /documents/verify` — verificação privada + VerificationAttempt PRIVATE
@@ -179,7 +179,7 @@ npx hardhat run scripts/deploy.ts --network sepolia   # tx confirmada, endereço
   - [x] Timeout explícito em `tx.wait()` (RNF02 cap 30s Sepolia) → `RequestTimeoutException`
   - [x] Balance check do signer antes de tx (warn se < 0.001 ETH)
   - [ ] Event parser opcional de `DocumentRegistered` — decidido não implementar (2ª call `verifyDocument` já cobre e é mais explícita)
-  - [ ] Teste de integração real contra Sepolia OU Hardhat fork — **deferido pra Fase 4** (integração)
+  - [x] Teste de integração real contra Sepolia OU Hardhat fork — **deferido pra Fase 4** (integração) — feito: E2E Hardhat no CI
 - [x] E2E `.e2e-spec.ts` do fluxo completo POST /documents → CONFIRMED — spec em `docchain-api/test/documents.hardhat.e2e-spec.ts`, gated por `E2E_HARDHAT=1`; setup em `docchain-api/test/README.md`
 
 ### Critério de conclusão da Fase 2
@@ -486,17 +486,17 @@ Executar o fluxo completo via browser:
 **Objetivo:** Sistema estável, documentado e pronto para apresentação do TCC.
 
 ### 4.1 Integração end-to-end (dia 1)
-- [ ] Docker Compose com todos os serviços (postgres + api + web)
+- [x] Docker Compose com todos os serviços (postgres + api + web + prometheus + grafana) — `docker-compose.yml` na raiz
 - [ ] Variáveis de ambiente de produção configuradas
-- [ ] Seed de dados para demonstração
+- [x] Seed de dados para demonstração — `npx prisma db seed` cria a conta demo (documentos são registrados ao vivo, precisam de tx real)
 - [ ] Testar fluxo completo no ambiente containerizado
-- [x] E2E do fluxo POST /documents → CONFIRMED com Hardhat local — spec gated por `E2E_HARDHAT=1` em `docchain-api/test/documents.hardhat.e2e-spec.ts`; falta integrar no CI
+- [x] E2E do fluxo POST /documents → CONFIRMED com Hardhat local — `docchain-api/test/documents.hardhat.e2e-spec.ts`, executado localmente em 03/11 e no job `E2E (API + Hardhat)` do CI
 
 ### 4.2 Documentação do TCC (dia 2)
-- [ ] README de cada repositório com instruções de setup
-- [ ] Diagrama de arquitetura (exportar versão visual de ARCHITECTURE.md)
-- [ ] Documentação do Smart Contract (NatSpec no Solidity)
-- [ ] Swagger disponível em /api/docs
+- [x] README de cada repositório com instruções de setup
+- [x] Diagrama de arquitetura — C4 níveis 1 a 3 em `RFC docs/artefatos_visuais/` e atualizado (com monitoramento) em `docs/wiki/Arquitetura.md`
+- [x] Documentação do Smart Contract (NatSpec no Solidity + `docchain-contracts/README.md`)
+- [x] Swagger disponível em /api/docs
 - [ ] Slide/resumo técnico para apresentação
 
 ---
@@ -515,7 +515,7 @@ Executar o fluxo completo via browser:
 - [x] Deps high/critical zeradas: API (bcrypt 6, multer 2, overrides deepmerge-ts/js-yaml) e web (Next 16, React 19, Tailwind 4); audit bloqueante
 - [ ] `@nestjs/swagger` 12 exige NestJS 12 — migrar Nest 11 -> 12 após a entrega (hoje js-yaml corrigido via override)
 - [x] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
-- [ ] Zerar erros de lint da API (~76, maioria `no-unsafe-*` em specs) e tornar o step bloqueante
+- [ ] Zerar erros de lint da API (179 em 03/11, maioria `no-unsafe-*` em specs) e tornar o step bloqueante
 - [ ] Branch protection na `main` exigindo CI verde
 - [ ] CD: deploy automático após merge na `main`
 
@@ -525,7 +525,7 @@ Executar o fluxo completo via browser:
 - [x] Incluir step de testes + coverage do web no CI
 
 ### 5.3 Análise estática
-- [ ] SonarCloud conectado ao repo (consome `lcov.info` da API e do web)
+- [ ] SonarCloud conectado ao repo — `sonar-project.properties` e job no CI prontos; falta importar o projeto no SonarCloud e criar o secret `SONAR_TOKEN`
 - [ ] Quality Gate visível no PR
 
 ### 5.4 Hospedagem pública
@@ -533,10 +533,10 @@ Executar o fluxo completo via browser:
 - [ ] Variáveis de produção e segredos configurados no provedor
 
 ### 5.5 Monitoramento
-- [ ] Ferramenta de observabilidade (NewRelic/Datadog/Prometheus+Grafana) apontando para `/health` e métricas da API
+- [x] Prometheus + Grafana: `GET /metrics` (prom-client), dashboard e alertas provisionados em `monitoring/`
 
 ### 5.6 Documentação
-- [ ] GitHub Wiki (requisitos, casos de uso, C4, instruções de deploy)
+- [ ] GitHub Wiki (requisitos, casos de uso, C4, deploy) — conteúdo pronto em `docs/wiki/`; falta criar a primeira página pela web e publicar
 
 ### Pendências herdadas (RFC 1.2 promete, código não tem)
 - [x] LGPD: `PATCH /auth/me`, `DELETE /auth/me`, `GET /auth/me/export` (RFC 6.4) — feito na Fase 3.9
@@ -544,8 +544,8 @@ Executar o fluxo completo via browser:
 - [x] Retry com backoff + RPC fallback no `BlockchainService` (RFC 7.2) — 3 tentativas, backoff 0/500/1500ms, rotação de RPCs via `RPC_FALLBACK_URLS` (CSV); reverts do contrato não retriam
 - [x] Re-registro de documento `FAILED` (RFC RN07) — feito na Fase 3.10 (reenvio do mesmo arquivo; E01 da RFC segue divergente: o rollback apaga o arquivo cifrado — ajustar texto da RFC)
 - [x] bcrypt: cost 12 (alinhado com RFC 6.1/6.2/6.3; RNF04 aceita >=10)
-- [ ] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10, KPI uptime) — hoje só tem postgres
-- [ ] Seed de demonstração + vídeo demo de 3 min (RFC 7.1 M4)
+- [x] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10)
+- [ ] Vídeo demo de 3 min (RFC 7.1 M4) — seed da conta demo pronto
 - [ ] Deploy: cookie `access_token` é emitido no domínio da API; `middleware.ts` do web só enxerga o cookie se web e API compartilharem domínio-pai (ou via proxy/rewrite do Next) — definir na hospedagem
 - [x] AuditLog LOGIN/LOGOUT/REGISTER (já instrumentado no AuthService/AuthController)
 
