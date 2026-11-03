@@ -74,23 +74,27 @@ npm run dev -- -p 3001
 
 ## Produção
 
-O Playbook da disciplina proíbe Vercel, Netlify, Render e Firebase e proíbe deploy manual por SSH ou FTP. O deploy precisa ser em nuvem pública e disparado pelo pipeline.
+O Playbook da disciplina proíbe Vercel, Netlify, Render e Firebase e proíbe deploy manual por SSH ou FTP. O DocChain roda numa VM Linux em nuvem pública com Docker Compose, e o pipeline faz o deploy sozinho:
 
-Requisitos do ambiente de produção:
+```
+merge na main -> CI verde -> CD: imagens no GHCR -> SSH na VM -> docker compose pull && up -d -> health check
+```
 
-| Item | Detalhe |
+Arquivos em `deploy/`: `docker-compose.prod.yml` (postgres, api, web, caddy, prometheus, grafana), `Caddyfile` e `.env.example`. O passo a passo da VM e dos secrets do GitHub está em `deploy/README.md`.
+
+| Item | Como fica |
 | --- | --- |
-| Domínio | Web e API no mesmo domínio registrável (ex.: `app.dominio` e `api.dominio`). O cookie usa `SameSite=Lax`, que só viaja entre subdomínios do mesmo site |
-| HTTPS | Obrigatório: com `NODE_ENV=production` o cookie é `Secure` |
-| Banco | PostgreSQL 16 gerenciado ou em container com volume persistente |
-| Storage | Volume persistente montado em `UPLOAD_DIR` |
-| Segredos | Variáveis da tabela acima no gerenciador de segredos do provedor, nunca no repositório |
+| Domínio | Um domínio só. O Caddy manda `/api/*` para a API e o resto para o web, então o cookie `access_token` (host-only, `SameSite=Lax`) é visto pelo proxy do Next |
+| HTTPS | Certificado automático do Let's Encrypt pelo Caddy. Necessário porque com `NODE_ENV=production` o cookie é `Secure` |
+| Banco e storage | Volumes Docker persistentes na VM |
+| Segredos | `.env` e `api.env` só na VM (`chmod 600`); chave SSH e host como secrets do GitHub |
 | Email | Domínio verificado no Resend para o `SMTP_FROM` |
-| Imagens | `docchain-api/Dockerfile` e `docchain-web/Dockerfile` (build arg `NEXT_PUBLIC_API_URL`) |
+| Monitoramento | Prometheus coleta pela rede interna; Grafana em `/grafana/`; `/api/metrics` bloqueado por fora |
+| Rollback | Fixar `IMAGE_TAG` com o SHA anterior e subir de novo |
 
-Checklist depois do deploy:
+Checklist depois do deploy (o CD já faz o primeiro):
 
-1. `GET /health` responde `status: ok` com banco e blockchain `up`.
+1. `GET https://<domínio>/api/health` responde `status: ok` com banco e blockchain `up`.
 2. Cadastro, login e upload de um arquivo pequeno até `CONFIRMED`.
 3. `/verify` com o mesmo arquivo mostra "Autêntico".
-4. Prometheus mostra o alvo `docchain-api` como `UP`.
+4. Grafana mostra a API no ar.

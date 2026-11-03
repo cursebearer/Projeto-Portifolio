@@ -171,11 +171,14 @@ jobs:
       - name: Smoke test api (entrypoint)
         if: matrix.service == 'api'
         run: docker run --rm docchain-api:ci test -f dist/main.js
-      - name: Compose válido
+      - name: Compose e Caddyfile válidos
         if: matrix.service == 'api'
         run: |
-          touch docchain-api/.env
+          touch docchain-api/.env deploy/api.env
           docker compose config --quiet
+          docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.example config --quiet
+          docker run --rm -e DOMAIN=docchain.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.10-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
   sonar:
     name: SonarCloud
