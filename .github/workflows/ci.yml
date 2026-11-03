@@ -76,7 +76,134 @@ jobs:
       - run: npm run lint
       - name: Test + coverage
         run: npm run test:cov
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-coverage
+          path: docchain-web/coverage/lcov.info
+          if-no-files-found: ignore
       - run: npm run build
+
+  e2e:
+    name: E2E (API + Hardhat)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: docchain
+          POSTGRES_PASSWORD: docchain
+          POSTGRES_DB: docchain_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U docchain"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_HARDHAT: '1'
+      DATABASE_URL: postgresql://docchain:docchain@localhost:5432/docchain_e2e?schema=public
+      RPC_URL: http://127.0.0.1:8545
+      # Conta #0 determinística do Hardhat (pública, só existe na chain local)
+      PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+      # Primeiro deploy da conta #0 sempre cai neste endereço
+      CONTRACT_ADDRESS: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+      NETWORK: localhost
+      JWT_SECRET: ci-e2e-jwt-secret-com-mais-de-32-caracteres
+      ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000001'
+      SMTP_HOST: smtp.example
+      SMTP_USER: x
+      SMTP_PASSWORD: x
+      SMTP_FROM: noreply@example.com
+      UPLOAD_DIR: ./uploads-e2e
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            docchain-contracts/package-lock.json
+            docchain-api/package-lock.json
+      - name: Hardhat node + deploy local
+        working-directory: docchain-contracts
+        run: |
+          npm ci
+          npx hardhat node > hardhat.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf -X POST -H 'Content-Type: application/json' --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' http://127.0.0.1:8545 > /dev/null && break; sleep 1; done
+          npx hardhat run scripts/deploy.ts --network localhost
+      - name: Migrations + E2E
+        working-directory: docchain-api
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run test:e2e -- documents.hardhat
+
+  docker:
+    name: Docker (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            context: docchain-api
+          - service: web
+            context: docchain-web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          load: true
+          tags: docchain-${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Smoke test web
+        if: matrix.service == 'web'
+        run: |
+          docker run -d --name web -p 3001:3001 docchain-web:ci
+          for i in $(seq 1 20); do curl -sf http://localhost:3001/ > /dev/null && exit 0; sleep 1; done
+          docker logs web; exit 1
+      - name: Smoke test api (entrypoint)
+        if: matrix.service == 'api'
+        run: docker run --rm docchain-api:ci test -f dist/main.js
+      - name: Compose válido
+        if: matrix.service == 'api'
+        run: |
+          touch docchain-api/.env
+          docker compose config --quiet
+
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          name: api-coverage
+          path: docchain-api/coverage
+      - uses: actions/download-artifact@v7
+        with:
+          name: web-coverage
+          path: docchain-web/coverage
+      - name: SonarCloud scan + Quality Gate
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+      - name: SONAR_TOKEN ausente
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning::SONAR_TOKEN não configurado; análise do SonarCloud pulada."
 
   audit:
     name: npm audit (${{ matrix.project }})

@@ -14,6 +14,7 @@ import { CryptoModule } from './crypto/crypto.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { MailerModule } from './mailer/mailer.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { PdfModule } from './pdf/pdf.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SharingModule } from './sharing/sharing.module';
@@ -54,6 +55,7 @@ import { VerificationModule } from './verification/verification.module';
         SHARE_RATE_LIMIT_PER_HOUR: Joi.number().default(5),
         CORS_ORIGIN: Joi.string().default('http://localhost:3001'),
         VERIFY_PUBLIC_BASE_URL: Joi.string().uri().default('http://localhost:3001/verify'),
+        METRICS_TOKEN: Joi.string().allow('').default(''),
       }),
     }),
     ThrottlerModule.forRootAsync({
@@ -79,6 +81,7 @@ import { VerificationModule } from './verification/verification.module';
     VerificationModule,
     HealthModule,
     SharingModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [

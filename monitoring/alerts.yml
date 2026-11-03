@@ -1,0 +1,37 @@
+groups:
+  - name: docchain
+    rules:
+      - alert: ApiDown
+        expr: up{job="docchain-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: API do DocChain fora do ar
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(docchain_http_requests_total{status_code=~"5.."}[5m]))
+            / clamp_min(sum(rate(docchain_http_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Mais de 5% das requisições com erro 5xx
+
+      - alert: SlowRequests
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(docchain_http_request_duration_seconds_bucket[5m]))) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: p95 de latência acima de 10s (registro on-chain lento)
+
+      - alert: FailedDocuments
+        expr: increase(docchain_documents{status="FAILED"}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Novos documentos com falha no registro on-chain

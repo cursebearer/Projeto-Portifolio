@@ -1,0 +1,88 @@
+# Stack completa do DocChain: Postgres + API (NestJS) + Web (Next.js).
+# Uso: docker compose up --build
+# Pré-requisito: docchain-api/.env preenchido (RPC_URL, PRIVATE_KEY, JWT_SECRET, ENCRYPTION_KEY, SMTP_*).
+# As variáveis abaixo sobrescrevem as do .env para rodar dentro da rede do compose.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: docchain
+      POSTGRES_PASSWORD: docchain
+      POSTGRES_DB: docchain
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docchain -d docchain"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./docchain-api
+    env_file: ./docchain-api/.env
+    environment:
+      DATABASE_URL: postgresql://docchain:docchain@postgres:5432/docchain?schema=public
+      UPLOAD_DIR: /app/uploads
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:3001
+      VERIFY_PUBLIC_BASE_URL: http://localhost:3001/verify
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: ./docchain-web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3000
+    ports:
+      - "3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  uploads_data:
+  prometheus_data:
+  grafana_data:
