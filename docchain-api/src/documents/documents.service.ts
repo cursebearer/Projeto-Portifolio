@@ -71,7 +71,42 @@ export class DocumentsService {
       this.prisma.document.count({ where }),
     ]);
 
-    return { items, total, page, limit };
+    const counts = await this.countDescendantsForMany(items.map((i) => i.id));
+    const withCount = items.map((item) => ({
+      ...item,
+      versionCount: counts.get(item.id) ?? 0,
+    }));
+
+    return { items: withCount, total, page, limit };
+  }
+
+  private async countDescendantsForMany(
+    ids: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>(ids.map((id) => [id, 0]));
+    if (ids.length === 0) return counts;
+
+    let frontier = new Map<string, string>(ids.map((id) => [id, id]));
+    while (frontier.size > 0) {
+      const parentIds = Array.from(frontier.keys());
+      const children = await this.prisma.document.findMany({
+        where: {
+          previousDocumentId: { in: parentIds },
+          deletedAt: null,
+        },
+        select: { id: true, previousDocumentId: true },
+      });
+      const next = new Map<string, string>();
+      for (const child of children) {
+        if (!child.previousDocumentId) continue;
+        const ancestor = frontier.get(child.previousDocumentId);
+        if (!ancestor) continue;
+        counts.set(ancestor, (counts.get(ancestor) ?? 0) + 1);
+        next.set(child.id, ancestor);
+      }
+      frontier = next;
+    }
+    return counts;
   }
 
   async findOne(userId: string, id: string): Promise<Document> {
@@ -165,7 +200,9 @@ export class DocumentsService {
     const isRetry =
       existing?.status === DocumentStatus.FAILED && existing.userId === userId;
     if (existing && !isRetry) {
-      throw new ConflictException('Documento com este hash já registrado.');
+      throw new ConflictException(
+        this.buildDuplicateError(existing, existing.userId === userId),
+      );
     }
 
     const fields = {
@@ -251,6 +288,31 @@ export class DocumentsService {
       });
       throw err;
     }
+  }
+
+  private buildDuplicateError(
+    existing: Document,
+    isOwner: boolean,
+  ): Record<string, unknown> {
+    const registeredAt =
+      existing.confirmedAt?.toISOString() ?? existing.uploadedAt.toISOString();
+    const dateBr = new Date(registeredAt).toLocaleDateString('pt-BR');
+    const walletShort = existing.walletAddress
+      ? `${existing.walletAddress.slice(0, 6)}…${existing.walletAddress.slice(-4)}`
+      : 'carteira oficial do DocChain';
+    const message = isOwner
+      ? `Você já registrou este arquivo em ${dateBr}. Para criar uma nova versão modifique o conteúdo antes de enviar.`
+      : `Este arquivo já foi registrado em ${dateBr} pela ${walletShort}. Você pode verificar a autenticidade sem precisar re-registrar.`;
+    return {
+      statusCode: 409,
+      message,
+      error: 'DOCUMENT_ALREADY_REGISTERED',
+      hash: existing.hash,
+      registeredAt,
+      walletAddress: existing.walletAddress,
+      verifyUrl: `/verify/${existing.hash}`,
+      isOwner,
+    };
   }
 
   private async resolveRoot(doc: Document): Promise<Document> {

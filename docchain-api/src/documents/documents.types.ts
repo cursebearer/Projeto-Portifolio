@@ -1,7 +1,9 @@
 import { Document } from '@prisma/client';
 
+export type DocumentWithVersionCount = Document & { versionCount: number };
+
 export interface PaginatedDocuments {
-  items: Document[];
+  items: DocumentWithVersionCount[];
   total: number;
   page: number;
   limit: number;

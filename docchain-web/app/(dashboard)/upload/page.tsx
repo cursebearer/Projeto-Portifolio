@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, RotateCcw, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from '@/components/upload/UploadDropzone';
@@ -12,7 +12,7 @@ import { UploadResult } from '@/components/upload/UploadResult';
 import { extractErrorMessage } from '@/lib/api';
 import { uploadDocument } from '@/lib/documents';
 import { stepStates, uploadErrorMessage, type UploadPhase } from '@/lib/upload-steps';
-import type { DocumentDto } from '@/types/document';
+import type { DocumentDto, DuplicateDocumentError } from '@/types/document';
 
 type Phase = 'idle' | UploadPhase;
 
@@ -24,6 +24,7 @@ export default function UploadPage() {
   const [now, setNow] = useState(0);
   const [failedAt, setFailedAt] = useState<number | undefined>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateDocumentError | null>(null);
   const [result, setResult] = useState<DocumentDto | null>(null);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function UploadPage() {
     setSendProgress(0);
     setFailedAt(undefined);
     setErrorMessage(null);
+    setDuplicate(null);
     setResult(null);
   };
 
@@ -67,10 +69,19 @@ export default function UploadPage() {
       toast.success('Documento registrado na blockchain');
     } catch (err) {
       const status = err instanceof AxiosError ? err.response?.status : undefined;
-      const message = uploadErrorMessage(status, extractErrorMessage(err, 'Falha ao registrar documento.'));
+      const payload =
+        err instanceof AxiosError
+          ? (err.response?.data as Partial<DuplicateDocumentError> | undefined)
+          : undefined;
+      const isDuplicate =
+        status === 409 && payload?.error === 'DOCUMENT_ALREADY_REGISTERED' && !!payload.hash;
+      const message = isDuplicate
+        ? (payload!.message ?? 'Este arquivo já foi registrado.')
+        : uploadErrorMessage(status, extractErrorMessage(err, 'Falha ao registrar documento.'));
       const states = stepStates(reachedServer ? 'processing' : 'uploading', Date.now() - processingStartedAt);
       setFailedAt(states.indexOf('active'));
       setErrorMessage(message);
+      setDuplicate(isDuplicate ? (payload as DuplicateDocumentError) : null);
       setPhase('error');
       toast.error(message);
     }
@@ -128,13 +139,34 @@ export default function UploadPage() {
 
           {phase === 'error' && (
             <div className="space-y-3">
-              <p role="alert" className="text-sm text-destructive">
+              <p
+                role="alert"
+                className={
+                  duplicate
+                    ? 'text-sm text-foreground'
+                    : 'text-sm text-destructive'
+                }
+              >
                 {errorMessage}
               </p>
-              <Button variant="outline" onClick={() => void submit()}>
-                <RotateCcw className="h-4 w-4" />
-                Tentar novamente
-              </Button>
+              {duplicate ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild>
+                    <Link href={duplicate.verifyUrl}>
+                      <ShieldCheck className="h-4 w-4" />
+                      Verificar documento existente
+                    </Link>
+                  </Button>
+                  <Button variant="outline" onClick={reset}>
+                    Enviar outro arquivo
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={() => void submit()}>
+                  <RotateCcw className="h-4 w-4" />
+                  Tentar novamente
+                </Button>
+              )}
             </div>
           )}
         </div>

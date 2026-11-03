@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Copy, FileText, MoreHorizontal } from 'lucide-react';
+import { Copy, FileText, GitBranch, MoreHorizontal } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -74,7 +74,16 @@ export function DocumentTable({ documents }: { documents: DocumentDto[] }) {
                   <div className="flex h-9 w-9 items-center justify-center rounded-md bg-accent text-primary">
                     <FileText className="h-4 w-4" />
                   </div>
-                  <span className="text-sm font-medium">{doc.fileName}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{doc.fileName}</span>
+                    {typeof doc.versionCount === 'number' && doc.versionCount > 0 && (
+                      <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <GitBranch className="h-3 w-3" />
+                        {doc.versionCount}{' '}
+                        {doc.versionCount === 1 ? 'versão' : 'versões'}
+                      </span>
+                    )}
+                  </div>
                 </Link>
               </TableCell>
               <TableCell>
