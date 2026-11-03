@@ -516,7 +516,7 @@ Executar o fluxo completo via browser:
 - [ ] `@nestjs/swagger` 12 exige NestJS 12 — migrar Nest 11 -> 12 após a entrega (hoje js-yaml corrigido via override)
 - [x] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
 - [x] Zerar erros de lint da API e tornar o step bloqueante (179 erros em 03/11: prettier, tipagem no código de produção; regras no-unsafe-* e unbound-method desligadas só em specs)
-- [ ] Branch protection na `main` exigindo CI verde
+- [x] Branch protection na `main` exigindo PR e CI verde (API, Web, Contracts, npm audit) — incluir E2E e Docker como obrigatórios depois do merge do #32
 - [ ] CD: deploy automático após merge na `main`
 
 ### 5.2 Testes frontend (mínimo 25%)
