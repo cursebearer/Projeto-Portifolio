@@ -1,0 +1,36 @@
+{$DOMAIN} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	handle /api/* {
+		# /metrics fica só na rede interna (Prometheus coleta direto em api:3000)
+		@metrics path /api/metrics /api/metrics/*
+		handle @metrics {
+			respond 404
+		}
+
+		# Swagger já é servido em /api/docs pela API: repassa sem remover o prefixo
+		@docs path /api/docs /api/docs/* /api/docs-json
+		handle @docs {
+			reverse_proxy api:3000
+		}
+
+		handle {
+			uri strip_prefix /api
+			reverse_proxy api:3000
+		}
+	}
+
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	handle {
+		reverse_proxy web:3001
+	}
+}

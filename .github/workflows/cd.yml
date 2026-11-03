@@ -63,3 +63,60 @@ jobs:
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    name: Deploy produção
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_DOMAIN: ${{ vars.DEPLOY_DOMAIN }}
+    steps:
+      - name: Hospedagem não configurada
+        if: env.DEPLOY_HOST == ''
+        run: echo "::warning::DEPLOY_HOST não configurado; imagens publicadas, deploy pulado."
+
+      - uses: actions/checkout@v7
+        if: env.DEPLOY_HOST != ''
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Chave SSH
+        if: env.DEPLOY_HOST != ''
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Envia arquivos de deploy
+        if: env.DEPLOY_HOST != ''
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/docchain'
+          scp -i ~/.ssh/deploy_key -r deploy/docker-compose.prod.yml deploy/Caddyfile monitoring \
+            "$DEPLOY_USER@$DEPLOY_HOST:~/docchain/"
+
+      - name: Atualiza containers
+        if: env.DEPLOY_HOST != ''
+        run: |
+          sha="${{ github.event.workflow_run.head_sha || github.sha }}"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "
+            cd ~/docchain &&
+            sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${sha::7}/' .env &&
+            docker compose -f docker-compose.prod.yml pull &&
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans &&
+            docker image prune -f
+          "
+
+      - name: Health check
+        if: env.DEPLOY_HOST != '' && env.DEPLOY_DOMAIN != ''
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf "https://$DEPLOY_DOMAIN/api/health" && exit 0
+            sleep 10
+          done
+          echo "::error::API não respondeu em https://$DEPLOY_DOMAIN/api/health"
+          exit 1
