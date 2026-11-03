@@ -12,13 +12,10 @@ import { RequestContextService } from './request-context.service';
 export class RequestContextInterceptor implements NestInterceptor {
   constructor(private readonly ctx: RequestContextService) {}
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<unknown> {
-    const req = context.switchToHttp().getRequest<
-      Request & { user?: { id?: string } }
-    >();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { id?: string } }>();
     const store = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],

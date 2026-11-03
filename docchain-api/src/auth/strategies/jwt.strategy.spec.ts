@@ -27,7 +27,9 @@ describe('JwtStrategy', () => {
 
   describe('cookieExtractor', () => {
     it('retorna access_token do cookie', () => {
-      const req = { cookies: { access_token: 'jwt-value' } } as unknown as Request;
+      const req = {
+        cookies: { access_token: 'jwt-value' },
+      } as unknown as Request;
       expect(cookieExtractor(req)).toBe('jwt-value');
     });
 

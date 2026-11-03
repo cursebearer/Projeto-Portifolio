@@ -97,10 +97,7 @@ describe('DocumentsController', () => {
       await controller.download(user, 'd1', res);
 
       expect(documents.download).toHaveBeenCalledWith('u1', 'd1');
-      expect(setHeader).toHaveBeenCalledWith(
-        'Content-Type',
-        'application/pdf',
-      );
+      expect(setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
       expect(setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename="doc.pdf"',

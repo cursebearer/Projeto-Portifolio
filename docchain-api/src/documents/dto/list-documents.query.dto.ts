@@ -1,7 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListDocumentsQueryDto {
   @ApiPropertyOptional({ minimum: 1, default: 1 })
@@ -25,7 +32,8 @@ export class ListDocumentsQueryDto {
   status?: DocumentStatus;
 
   @ApiPropertyOptional({
-    description: 'Se true, retorna todas as versões; default retorna apenas raízes.',
+    description:
+      'Se true, retorna todas as versões; default retorna apenas raízes.',
     default: false,
   })
   @IsOptional()

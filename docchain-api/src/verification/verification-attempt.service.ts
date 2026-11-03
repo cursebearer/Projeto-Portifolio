@@ -39,7 +39,7 @@ export class VerificationAttemptService {
     } catch (err) {
       this.logger.warn(
         `Falha ao gravar VerificationAttempt (${opts.source}): ${
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : String(err)
         }`,
       );
     }

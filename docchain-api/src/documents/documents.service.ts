@@ -138,7 +138,7 @@ export class DocumentsService {
     } catch (err) {
       this.logger.warn(
         `Delete: falha ao apagar ${doc.hash}.enc: ${
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : String(err)
         }`,
       );
     }
@@ -275,7 +275,7 @@ export class DocumentsService {
       } catch (delErr) {
         this.logger.warn(
           `Rollback: falha ao apagar ${hash}.enc: ${
-            delErr instanceof Error ? delErr.message : delErr
+            delErr instanceof Error ? delErr.message : String(delErr)
           }`,
         );
       }

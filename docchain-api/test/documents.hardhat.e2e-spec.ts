@@ -57,7 +57,7 @@ describeOrSkip('Documents E2E (Hardhat local)', () => {
       .expect(200);
 
     const setCookie = loginRes.headers['set-cookie'];
-    cookie = Array.isArray(setCookie) ? setCookie[0] : (setCookie as string);
+    cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
     expect(cookie).toMatch(/access_token=/);
 
     const content = Buffer.from(
@@ -82,8 +82,6 @@ describeOrSkip('Documents E2E (Hardhat local)', () => {
       .get(`/verify/public/${expectedHash}`)
       .expect(200);
     expect(verifyRes.body.exists).toBe(true);
-    expect(verifyRes.body.documentHash.toLowerCase()).toBe(
-      `0x${expectedHash}`,
-    );
+    expect(verifyRes.body.documentHash.toLowerCase()).toBe(`0x${expectedHash}`);
   }, 60000);
 });

@@ -18,22 +18,27 @@ describe('MetricsController', () => {
   }
 
   function makeController(token: string) {
-    const config = { get: jest.fn().mockReturnValue(token) } as unknown as ConfigService;
+    const config = {
+      get: jest.fn().mockReturnValue(token),
+    } as unknown as ConfigService;
     return new MetricsController(metrics, config);
   }
 
   it('sem METRICS_TOKEN responde aberto', async () => {
     const res = makeRes();
     await makeController('').scrape(undefined, res);
-    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', metrics.contentType);
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Type',
+      metrics.contentType,
+    );
     expect(res.send).toHaveBeenCalledWith('docchain_up 1');
   });
 
   it('com METRICS_TOKEN exige Bearer correto', async () => {
     const controller = makeController('segredo');
-    await expect(controller.scrape(undefined, makeRes())).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.scrape(undefined, makeRes()),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(
       controller.scrape('Bearer errado', makeRes()),
     ).rejects.toBeInstanceOf(UnauthorizedException);

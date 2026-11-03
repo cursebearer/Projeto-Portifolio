@@ -9,8 +9,7 @@ describe('LocalStorageService', () => {
   let service: LocalStorageService;
   let uploadDir: string;
 
-  const hash =
-    'a'.repeat(64);
+  const hash = 'a'.repeat(64);
   const buffer = Buffer.from('conteúdo cifrado de teste');
 
   beforeEach(async () => {
@@ -52,12 +51,12 @@ describe('LocalStorageService', () => {
     });
 
     it('rejeita hash inválido (path traversal)', async () => {
-      await expect(
-        service.save('../evil', buffer),
-      ).rejects.toThrow(/hash inválido/i);
-      await expect(
-        service.save('a'.repeat(63), buffer),
-      ).rejects.toThrow(/hash inválido/i);
+      await expect(service.save('../evil', buffer)).rejects.toThrow(
+        /hash inválido/i,
+      );
+      await expect(service.save('a'.repeat(63), buffer)).rejects.toThrow(
+        /hash inválido/i,
+      );
       await expect(
         service.save('ZZZ' + 'a'.repeat(61), buffer),
       ).rejects.toThrow(/hash inválido/i);
@@ -94,9 +93,7 @@ describe('LocalStorageService', () => {
     });
 
     it('rejeita hash inválido', async () => {
-      await expect(service.delete('../evil')).rejects.toThrow(
-        /hash inválido/i,
-      );
+      await expect(service.delete('../evil')).rejects.toThrow(/hash inválido/i);
     });
   });
 
@@ -116,9 +113,7 @@ describe('LocalStorageService', () => {
       const badConfig = {
         get: jest.fn(() => undefined),
       } as unknown as ConfigService;
-      expect(() => new LocalStorageService(badConfig)).toThrow(
-        /UPLOAD_DIR/,
-      );
+      expect(() => new LocalStorageService(badConfig)).toThrow(/UPLOAD_DIR/);
     });
   });
 });

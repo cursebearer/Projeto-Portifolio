@@ -27,10 +27,7 @@ describe('MailerService', () => {
       }),
     };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MailerService,
-        { provide: ConfigService, useValue: config },
-      ],
+      providers: [MailerService, { provide: ConfigService, useValue: config }],
     }).compile();
     return module.get<MailerService>(MailerService);
   };
@@ -81,7 +78,11 @@ describe('MailerService', () => {
       subject: 'Teste',
       text: 'corpo',
       attachments: [
-        { filename: 'doc.pdf', content: Buffer.from('x'), contentType: 'application/pdf' },
+        {
+          filename: 'doc.pdf',
+          content: Buffer.from('x'),
+          contentType: 'application/pdf',
+        },
       ],
     });
 

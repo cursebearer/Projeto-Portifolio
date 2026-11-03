@@ -105,9 +105,7 @@ describe('CryptoService', () => {
     it('serialize concatena iv(12) + authTag(16) + ciphertext', () => {
       const payload = service.encrypt(Buffer.from('teste'));
       const serialized = service.serializePayload(payload);
-      expect(serialized.length).toBe(
-        12 + 16 + payload.ciphertext.length,
-      );
+      expect(serialized.length).toBe(12 + 16 + payload.ciphertext.length);
       expect(serialized.subarray(0, 12).equals(payload.iv)).toBe(true);
       expect(serialized.subarray(12, 28).equals(payload.authTag)).toBe(true);
     });
@@ -131,18 +129,14 @@ describe('CryptoService', () => {
       const badConfig = {
         get: jest.fn(() => undefined),
       } as unknown as ConfigService;
-      expect(() => new CryptoService(badConfig)).toThrow(
-        /ENCRYPTION_KEY/,
-      );
+      expect(() => new CryptoService(badConfig)).toThrow(/ENCRYPTION_KEY/);
     });
 
     it('lança erro se ENCRYPTION_KEY não for 64 hex chars', () => {
       const badConfig = {
         get: jest.fn(() => 'chave-curta'),
       } as unknown as ConfigService;
-      expect(() => new CryptoService(badConfig)).toThrow(
-        /ENCRYPTION_KEY/,
-      );
+      expect(() => new CryptoService(badConfig)).toThrow(/ENCRYPTION_KEY/);
     });
   });
 

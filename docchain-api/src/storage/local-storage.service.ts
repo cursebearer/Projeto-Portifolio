@@ -44,9 +44,9 @@ export class LocalStorageService implements IStorageService {
     await unlink(path);
   }
 
-  async exists(hash: string): Promise<boolean> {
+  exists(hash: string): Promise<boolean> {
     this.assertValidHash(hash);
-    return existsSync(this.pathFor(hash));
+    return Promise.resolve(existsSync(this.pathFor(hash)));
   }
 
   private pathFor(hash: string): string {
@@ -61,9 +61,7 @@ export class LocalStorageService implements IStorageService {
 
   private assertValidHash(hash: string): void {
     if (!HASH_REGEX.test(hash)) {
-      throw new Error(
-        'hash inválido: exige 64 chars hex lowercase (SHA-256).',
-      );
+      throw new Error('hash inválido: exige 64 chars hex lowercase (SHA-256).');
     }
   }
 }

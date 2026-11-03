@@ -44,8 +44,6 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - name: Lint
-        # TODO: tornar bloqueante apos zerar os erros de no-unsafe-* nos specs
-        continue-on-error: true
         run: npx eslint "{src,test}/**/*.ts"
       - run: npm run build
       - name: Test + coverage (threshold 75%)

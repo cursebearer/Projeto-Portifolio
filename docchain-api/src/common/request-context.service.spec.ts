@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { RequestContextService } from './request-context.service';
 
 describe('RequestContextService', () => {
@@ -15,7 +15,7 @@ describe('RequestContextService', () => {
   it('run() propaga contexto pra função async', async () => {
     const stored = await service.run(
       { ipAddress: '1.2.3.4', userAgent: 'test-agent', userId: 'u1' },
-      async () => service.get(),
+      () => Promise.resolve(service.get()),
     );
     expect(stored).toEqual({
       ipAddress: '1.2.3.4',
@@ -26,8 +26,12 @@ describe('RequestContextService', () => {
 
   it('contexto isolado entre chamadas paralelas de run()', async () => {
     const [a, b] = await Promise.all([
-      service.run({ ipAddress: '1.1.1.1' }, async () => service.get().ipAddress),
-      service.run({ ipAddress: '2.2.2.2' }, async () => service.get().ipAddress),
+      service.run({ ipAddress: '1.1.1.1' }, () =>
+        Promise.resolve(service.get().ipAddress),
+      ),
+      service.run({ ipAddress: '2.2.2.2' }, () =>
+        Promise.resolve(service.get().ipAddress),
+      ),
     ]);
     expect(a).toBe('1.1.1.1');
     expect(b).toBe('2.2.2.2');
@@ -37,7 +41,7 @@ describe('RequestContextService', () => {
     const obs = service.runObservable(
       { ipAddress: '9.9.9.9' },
       () =>
-        new (require('rxjs').Observable)((sub: any) => {
+        new Observable<string | undefined>((sub) => {
           sub.next(service.get().ipAddress);
           sub.complete();
         }),

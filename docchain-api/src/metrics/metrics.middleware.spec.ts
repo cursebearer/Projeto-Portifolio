@@ -19,7 +19,11 @@ describe('MetricsMiddleware', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('chama next e observa a requisição ao terminar', () => {
-    const req = { method: 'GET', baseUrl: '', route: { path: '/documents/:id' } };
+    const req = {
+      method: 'GET',
+      baseUrl: '',
+      route: { path: '/documents/:id' },
+    };
     const { res, next } = run(req, 404);
     expect(next).toHaveBeenCalled();
     expect(observeRequest).not.toHaveBeenCalled();
@@ -33,7 +37,11 @@ describe('MetricsMiddleware', () => {
   });
 
   it('ignora o próprio endpoint /metrics', () => {
-    const { res } = run({ method: 'GET', baseUrl: '', route: { path: '/metrics' } });
+    const { res } = run({
+      method: 'GET',
+      baseUrl: '',
+      route: { path: '/metrics' },
+    });
     res.emit('finish');
     expect(observeRequest).not.toHaveBeenCalled();
   });
@@ -44,7 +52,10 @@ describe('MetricsMiddleware', () => {
 
   it('concatena baseUrl com o path da rota', () => {
     expect(
-      resolveRoute({ baseUrl: '/api', route: { path: '/x' } } as unknown as Request),
+      resolveRoute({
+        baseUrl: '/api',
+        route: { path: '/x' },
+      } as unknown as Request),
     ).toBe('/api/x');
   });
 });
