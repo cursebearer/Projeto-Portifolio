@@ -515,7 +515,7 @@ Executar o fluxo completo via browser:
 - [x] Deps high/critical zeradas: API (bcrypt 6, multer 2, overrides deepmerge-ts/js-yaml) e web (Next 16, React 19, Tailwind 4); audit bloqueante
 - [ ] `@nestjs/swagger` 12 exige NestJS 12 — migrar Nest 11 -> 12 após a entrega (hoje js-yaml corrigido via override)
 - [x] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
-- [ ] Zerar erros de lint da API (179 em 03/11, maioria `no-unsafe-*` em specs) e tornar o step bloqueante
+- [x] Zerar erros de lint da API e tornar o step bloqueante (179 erros em 03/11: prettier, tipagem no código de produção; regras no-unsafe-* e unbound-method desligadas só em specs)
 - [ ] Branch protection na `main` exigindo CI verde
 - [ ] CD: deploy automático após merge na `main`
 

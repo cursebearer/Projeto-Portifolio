@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Document } from '@prisma/client';
-import PDFDocument = require('pdfkit');
+import PDFDocument from 'pdfkit';
 import { toDataURL as qrToDataURL } from 'qrcode';
 
 const TEMPLATE_VERSION = 'v1.1';

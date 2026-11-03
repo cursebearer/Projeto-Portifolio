@@ -98,7 +98,10 @@ export class BlockchainService {
       // tx submission é retriable (sem efeito colateral até tx aceita)
       // tx.wait NÃO é retriable (tx já broadcasted; retry duplicaria)
       const tx = await this.retryWithFallback(
-        (c) => c.registerDocument(bytes32, storageRef),
+        (c) =>
+          c.registerDocument(bytes32, storageRef) as Promise<{
+            wait: (confirmations?: number) => Promise<unknown>;
+          }>,
         'registerDocument',
       );
       const receipt = await this.waitWithTimeout(tx);
@@ -134,7 +137,7 @@ export class BlockchainService {
     } catch (err) {
       this.logger.warn(
         `Não foi possível checar saldo pré-transação: ${
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : String(err)
         }`,
       );
     }
@@ -169,9 +172,9 @@ export class BlockchainService {
           clearTimeout(timer);
           resolve(val);
         },
-        (err) => {
+        (err: unknown) => {
           clearTimeout(timer);
-          reject(err);
+          reject(err instanceof Error ? err : new Error(String(err)));
         },
       );
     });
@@ -232,13 +235,14 @@ export class BlockchainService {
   async verifyDocument(hash: string): Promise<VerifyResult> {
     const bytes32 = this.toBytes32(hash);
     const record = await this.retryWithFallback(
-      (c) => c.verifyDocument(bytes32) as Promise<{
-        documentHash: string;
-        storageRef: string;
-        registeredBy: string;
-        timestamp: bigint;
-        exists: boolean;
-      }>,
+      (c) =>
+        c.verifyDocument(bytes32) as Promise<{
+          documentHash: string;
+          storageRef: string;
+          registeredBy: string;
+          timestamp: bigint;
+          exists: boolean;
+        }>,
       'verifyDocument',
     );
     return {
@@ -271,9 +275,7 @@ export class BlockchainService {
   private mapError(err: unknown): Error {
     if (err instanceof BadRequestException) return err;
     if (err instanceof RequestTimeoutException) return err;
-    const revertName = (
-      err as { revert?: { name?: string } }
-    ).revert?.name;
+    const revertName = (err as { revert?: { name?: string } }).revert?.name;
 
     if (revertName === 'DocumentAlreadyRegistered') {
       return new ConflictException('Documento já registrado on-chain.');
@@ -282,7 +284,9 @@ export class BlockchainService {
       return new BadRequestException('Hash inválido rejeitado pelo contrato.');
     }
     if (revertName === 'EmptyStorageRef') {
-      return new BadRequestException('StorageRef vazio rejeitado pelo contrato.');
+      return new BadRequestException(
+        'StorageRef vazio rejeitado pelo contrato.',
+      );
     }
 
     const message =

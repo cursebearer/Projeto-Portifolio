@@ -17,10 +17,9 @@ describe('RequestContextInterceptor', () => {
       switchToHttp: () => ({ getRequest: () => req }),
     }) as unknown as ExecutionContext;
 
-  const handler = (produced: () => unknown): CallHandler =>
-    ({
-      handle: () => of(produced()),
-    }) as unknown as CallHandler;
+  const handler = (produced: () => unknown): CallHandler => ({
+    handle: () => of(produced()),
+  });
 
   it('captura ip + userAgent + userId em store ALS', (done) => {
     const req = {

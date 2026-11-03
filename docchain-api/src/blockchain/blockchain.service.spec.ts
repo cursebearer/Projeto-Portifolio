@@ -32,21 +32,22 @@ jest.mock('ethers', () => {
   };
 });
 
-const contractMock = (jest.requireMock('ethers') as { __contractInstance: {
-  registerDocument: jest.Mock;
-  verifyDocument: jest.Mock;
-  isRegistered: jest.Mock;
-} }).__contractInstance;
+const contractMock = jest.requireMock<{
+  __contractInstance: {
+    registerDocument: jest.Mock;
+    verifyDocument: jest.Mock;
+    isRegistered: jest.Mock;
+  };
+}>('ethers').__contractInstance;
 
-const providerMock = (jest.requireMock('ethers') as {
+const providerMock = jest.requireMock<{
   __providerInstance: {
     getBalance: jest.Mock;
     getBlockNumber: jest.Mock;
   };
-}).__providerInstance;
+}>('ethers').__providerInstance;
 
-const validHash =
-  'a'.repeat(64);
+const validHash = 'a'.repeat(64);
 const validHashPrefixed = '0x' + validHash;
 
 describe('BlockchainService', () => {
@@ -134,10 +135,7 @@ describe('BlockchainService', () => {
       });
       contractMock.registerDocument.mockResolvedValue({ wait: waitMock });
 
-      const result = await service.registerDocument(
-        validHash,
-        'local:abc.enc',
-      );
+      const result = await service.registerDocument(validHash, 'local:abc.enc');
 
       expect(contractMock.registerDocument).toHaveBeenCalledWith(
         validHashPrefixed,
@@ -284,9 +282,7 @@ describe('BlockchainService', () => {
 
       const result = await service.isRegistered(validHash);
 
-      expect(contractMock.isRegistered).toHaveBeenCalledWith(
-        validHashPrefixed,
-      );
+      expect(contractMock.isRegistered).toHaveBeenCalledWith(validHashPrefixed);
       expect(result).toBe(true);
     });
 

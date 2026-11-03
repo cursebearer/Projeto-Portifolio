@@ -14,7 +14,10 @@ import { VerificationSource } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { BlockchainService, VerifyResult } from '../blockchain/blockchain.service';
+import {
+  BlockchainService,
+  VerifyResult,
+} from '../blockchain/blockchain.service';
 import { VerifyHashDto } from './dto/verify-hash.dto';
 import { VerificationAttemptService } from './verification-attempt.service';
 

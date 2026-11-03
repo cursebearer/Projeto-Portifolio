@@ -39,7 +39,7 @@ export class AuditLogService {
     } catch (err) {
       this.logger.warn(
         `Falha ao gravar AuditLog (${opts.action}): ${
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : String(err)
         }`,
       );
     }

@@ -54,7 +54,9 @@ import { VerificationModule } from './verification/verification.module';
         SMTP_FROM: Joi.string().required(),
         SHARE_RATE_LIMIT_PER_HOUR: Joi.number().default(5),
         CORS_ORIGIN: Joi.string().default('http://localhost:3001'),
-        VERIFY_PUBLIC_BASE_URL: Joi.string().uri().default('http://localhost:3001/verify'),
+        VERIFY_PUBLIC_BASE_URL: Joi.string()
+          .uri()
+          .default('http://localhost:3001/verify'),
         METRICS_TOKEN: Joi.string().allow('').default(''),
       }),
     }),
@@ -62,8 +64,7 @@ import { VerificationModule } from './verification/verification.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
         {
-          ttl:
-            config.get<number>('THROTTLE_TTL_SECONDS', 60) * 1000,
+          ttl: config.get<number>('THROTTLE_TTL_SECONDS', 60) * 1000,
           limit: config.get<number>('THROTTLE_LIMIT', 100),
         },
       ],

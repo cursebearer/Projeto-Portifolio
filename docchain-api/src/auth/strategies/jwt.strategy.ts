@@ -11,7 +11,7 @@ export interface JwtPayload {
 }
 
 export const cookieExtractor = (req: Request): string | null => {
-  const cookies = (req as Request & { cookies?: Record<string, string> })
+  const cookies = (req as unknown as { cookies?: Record<string, string> })
     .cookies;
   return cookies?.access_token ?? null;
 };
