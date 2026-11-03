@@ -28,11 +28,13 @@ export class MetricsService {
     registers: [this.registry],
   });
 
+  readonly documentsByStatus: Gauge;
+
   constructor(private readonly prisma: PrismaService) {
     collectDefaultMetrics({ register: this.registry, prefix: 'docchain_' });
 
     const prismaRef = this.prisma;
-    new Gauge({
+    this.documentsByStatus = new Gauge({
       name: 'docchain_documents',
       help: 'Documentos não removidos por status',
       labelNames: ['status'],
