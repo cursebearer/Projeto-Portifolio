@@ -1,0 +1,104 @@
+# Stack de produção: roda numa VM Linux de qualquer nuvem pública (AWS, Azure, GCP, Hostinger).
+# As imagens vêm do GHCR, publicadas pelo workflow CD. O Caddy termina HTTPS (Let's Encrypt)
+# e serve tudo num domínio só:
+#   https://$DOMAIN/          -> web
+#   https://$DOMAIN/api/*     -> api (prefixo /api removido)
+#   https://$DOMAIN/grafana/  -> grafana
+# Mesmo host para web e API: o cookie access_token fica visível para o proxy do Next.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: docchain
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: docchain
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docchain -d docchain"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/${IMAGE_OWNER:-cursebearer}/docchain-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: ./api.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://docchain:${POSTGRES_PASSWORD}@postgres:5432/docchain?schema=public
+      UPLOAD_DIR: /app/uploads
+      PORT: 3000
+      CORS_ORIGIN: https://${DOMAIN}
+      VERIFY_PUBLIC_BASE_URL: https://${DOMAIN}/verify
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  web:
+    image: ghcr.io/${IMAGE_OWNER:-cursebearer}/docchain-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  uploads_data:
+  prometheus_data:
+  grafana_data:
+  caddy_data:
+  caddy_config:

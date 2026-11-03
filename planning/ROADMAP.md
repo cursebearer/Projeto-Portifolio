@@ -517,7 +517,7 @@ Executar o fluxo completo via browser:
 - [x] Mover `shadcn` de `dependencies` para `devDependencies` no web (CLI, não é runtime)
 - [x] Zerar erros de lint da API e tornar o step bloqueante (179 erros em 03/11: prettier, tipagem no código de produção; regras no-unsafe-* e unbound-method desligadas só em specs)
 - [x] Branch protection na `main` exigindo PR e CI verde (API, Web, Contracts, npm audit) — incluir E2E e Docker como obrigatórios depois do merge do #32
-- [ ] CD: deploy automático após merge na `main`
+- [x] CD: imagens no GHCR + deploy por SSH na VM com `docker compose pull && up -d` e health check (`.github/workflows/cd.yml`, `deploy/`); ativa quando os secrets `DEPLOY_*` existirem
 
 ### 5.2 Testes frontend (mínimo 25%)
 - [x] Vitest 5 + Testing Library + jsdom no `docchain-web` (`npm run test`, `test:cov`); exige Node 22+, CI e Dockerfile da API subiram para Node 24
@@ -546,7 +546,7 @@ Executar o fluxo completo via browser:
 - [x] bcrypt: cost 12 (alinhado com RFC 6.1/6.2/6.3; RNF04 aceita >=10)
 - [x] Docker Compose unificado (postgres + api + web) com `docker compose up` (RNF10)
 - [ ] Vídeo demo de 3 min (RFC 7.1 M4) — seed da conta demo pronto
-- [ ] Deploy: cookie `access_token` é emitido no domínio da API; `middleware.ts` do web só enxerga o cookie se web e API compartilharem domínio-pai (ou via proxy/rewrite do Next) — definir na hospedagem
+- [x] Cookie em produção: Caddy serve web e API no mesmo domínio (`/api/*` -> API), então o cookie host-only é visto pelo proxy do Next
 - [x] AuditLog LOGIN/LOGOUT/REGISTER (já instrumentado no AuthService/AuthController)
 
 ### Atualização da RFC (v1.2 → v1.3)
