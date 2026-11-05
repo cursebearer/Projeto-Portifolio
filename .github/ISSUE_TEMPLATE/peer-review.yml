@@ -1,0 +1,102 @@
+name: Peer review
+description: Registro do teste feito por colega (roteiro completo)
+title: "Peer review - "
+labels: ["peer-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por testar o DocChain. Marque cada item que você executou.
+        Encontrou defeito? Abra uma issue separada com o template **Defeito** para cada um e cite o número aqui.
+  - type: input
+    id: revisor
+    attributes:
+      label: Nome do revisor
+    validations:
+      required: true
+  - type: input
+    id: data
+    attributes:
+      label: Data do teste
+      placeholder: dd/mm/aaaa
+    validations:
+      required: true
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: Como testou
+      options:
+        - Sistema publicado (URL pública)
+        - Rodando no computador do autor (presencial ou chamada)
+        - Rodando no meu computador
+        - Somente leitura do código
+    validations:
+      required: true
+  - type: checkboxes
+    id: conta
+    attributes:
+      label: Cadastro e login
+      options:
+        - label: Criar conta com dados válidos
+        - label: Criar conta com e-mail já cadastrado
+        - label: Criar conta com senha fraca ou campos vazios
+        - label: Login com senha errada
+        - label: Acessar /dashboard sem estar logado
+        - label: Logout e tentar voltar com o botão do navegador
+  - type: checkboxes
+    id: upload
+    attributes:
+      label: Upload e registro
+      options:
+        - label: Enviar PDF ou imagem comum e acompanhar até CONFIRMED
+        - label: Enviar arquivo vazio (0 bytes)
+        - label: Enviar arquivo maior que 50 MB
+        - label: Enviar o mesmo arquivo duas vezes
+        - label: Abrir o link da transação no Etherscan
+  - type: checkboxes
+    id: documento
+    attributes:
+      label: Detalhe do documento
+      options:
+        - label: Verificar integridade com o arquivo original
+        - label: Verificar integridade com outro arquivo
+        - label: Baixar o documento
+        - label: Gerar link de compartilhamento e abrir em aba anônima
+        - label: Enviar nova versão e conferir o histórico de versões
+        - label: Excluir documento
+  - type: checkboxes
+    id: verify
+    attributes:
+      label: Verificação pública (/verify)
+      options:
+        - label: Verificar sem login enviando o arquivo original
+        - label: Verificar um hash inexistente
+        - label: Acessar /verify/texto-invalido
+  - type: checkboxes
+    id: conta-lgpd
+    attributes:
+      label: Minha conta
+      options:
+        - label: Exportar meus dados (JSON)
+        - label: Excluir conta com senha errada
+        - label: Excluir conta com senha correta
+  - type: checkboxes
+    id: geral
+    attributes:
+      label: Geral
+      options:
+        - label: Usar no celular (layout, menus, botões)
+        - label: Textos, mensagens de erro e ortografia
+  - type: textarea
+    id: defeitos
+    attributes:
+      label: Defeitos encontrados
+      description: Liste os números das issues abertas com o template Defeito, ou escreva "Nenhum defeito encontrado".
+      placeholder: "#40, #41"
+    validations:
+      required: true
+  - type: textarea
+    id: sugestoes
+    attributes:
+      label: Sugestões de melhoria
+      description: Opcional. O que poderia ser mais claro, rápido ou fácil.

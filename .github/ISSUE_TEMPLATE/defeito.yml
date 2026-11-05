@@ -1,0 +1,45 @@
+name: Defeito
+description: Algo não funcionou como esperado
+title: "[Defeito] "
+labels: ["bug"]
+body:
+  - type: input
+    id: tela
+    attributes:
+      label: Onde aconteceu
+      placeholder: "Ex.: /upload, detalhe do documento, /verify"
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. Fazer login
+        2. Ir em ...
+        3. Clicar em ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: ocorrido
+    attributes:
+      label: Resultado obtido
+      description: Cole prints ou mensagens de erro se tiver.
+    validations:
+      required: true
+  - type: dropdown
+    id: severidade
+    attributes:
+      label: Gravidade
+      options:
+        - Baixa (visual, texto)
+        - Média (atrapalha, mas tem contorno)
+        - Alta (impede usar a funcionalidade)
+    validations:
+      required: true
