@@ -86,9 +86,27 @@ docker compose exec api npx prisma db seed   # demo@docchain.dev / DocChain@2026
 | API | http://localhost:3000 |
 | Swagger | http://localhost:3000/api/docs |
 | Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3002 |
+| Grafana | http://localhost:3002 (`admin` / `admin`) |
+
+### Comandos do dia a dia
+
+Sempre na pasta raiz do projeto:
+
+| Ação | Comando |
+| --- | --- |
+| Ligar tudo (banco, API, site, Prometheus e Grafana) | `docker compose up -d` |
+| Desligar tudo (os dados continuam salvos) | `docker compose down` |
+| Ver o que está rodando | `docker compose ps` |
+| Aplicar mudanças no código | `docker compose up -d --build` |
+| Acompanhar os logs da API | `docker compose logs -f api` |
+
+Não use `docker compose down -v`: o `-v` apaga os volumes, ou seja, o banco e os arquivos enviados.
+
+O Prometheus coleta as métricas da API dentro da rede do Docker. Se a API estiver rodando fora do Docker (modo desenvolvimento abaixo), o Grafana fica sem dados.
 
 ## Rodar em modo desenvolvimento
+
+Para programar com recarga automática, só o banco roda no Docker e a API e o site rodam com `npm`. Antes, desligue a API e o site do Docker (`docker compose down`) para liberar as portas 3000 e 3001.
 
 ```bash
 docker compose up -d postgres
