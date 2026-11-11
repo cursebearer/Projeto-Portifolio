@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
@@ -83,6 +84,7 @@ import { VerificationModule } from './verification/verification.module';
     HealthModule,
     SharingModule,
     MetricsModule,
+    ApiKeysModule,
   ],
   controllers: [AppController],
   providers: [

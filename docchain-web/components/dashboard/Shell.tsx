@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { CircleUser, LayoutDashboard, LogOut, Menu, ShieldCheck, Upload, X } from 'lucide-react';
+import { CircleUser, KeyRound, LayoutDashboard, LogOut, Menu, ShieldCheck, Upload, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { extractErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/upload', label: 'Novo upload', icon: Upload },
   { href: '/verify', label: 'Verificar', icon: ShieldCheck },
+  { href: '/integracao', label: 'API', icon: KeyRound },
   { href: '/conta', label: 'Minha conta', icon: CircleUser },
 ];
 

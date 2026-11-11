@@ -15,11 +15,12 @@ export class RequestContextInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context
       .switchToHttp()
-      .getRequest<Request & { user?: { id?: string } }>();
+      .getRequest<Request & { user?: { id?: string }; apiKeyId?: string }>();
     const store = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       userId: req.user?.id,
+      apiKeyId: req.apiKeyId,
     };
     return this.ctx.runObservable(store, () => next.handle());
   }

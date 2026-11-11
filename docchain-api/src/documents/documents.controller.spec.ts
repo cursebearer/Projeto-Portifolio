@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
+import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import { AuthenticatedUser } from '../auth/auth.service';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
@@ -37,7 +38,10 @@ describe('DocumentsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DocumentsController],
       providers: [{ provide: DocumentsService, useValue: documents }],
-    }).compile();
+    })
+      .overrideGuard(JwtOrApiKeyGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<DocumentsController>(DocumentsController);
   });

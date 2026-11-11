@@ -24,6 +24,45 @@ describe('AuditLogService', () => {
     service = module.get<AuditLogService>(AuditLogService);
   });
 
+  describe('ações via API key', () => {
+    const lastData = () =>
+      (
+        prisma.auditLog.create.mock.calls[0] as [
+          { data: { metadata: unknown } },
+        ]
+      )[0].data.metadata;
+
+    it('junta via=api_key e apiKeyId ao metadata existente', async () => {
+      ctx.get.mockReturnValue({ userId: 'u1', apiKeyId: 'k1' });
+
+      await service.log({
+        action: AuditAction.UPLOAD,
+        metadata: { hash: 'h' },
+      });
+
+      expect(lastData()).toEqual({ hash: 'h', via: 'api_key', apiKeyId: 'k1' });
+    });
+
+    it('cria o metadata quando a ação não tinha', async () => {
+      ctx.get.mockReturnValue({ userId: 'u1', apiKeyId: 'k1' });
+
+      await service.log({ action: AuditAction.UPLOAD });
+
+      expect(lastData()).toEqual({ via: 'api_key', apiKeyId: 'k1' });
+    });
+
+    it('sem API key mantém o metadata como veio', async () => {
+      ctx.get.mockReturnValue({ userId: 'u1' });
+
+      await service.log({
+        action: AuditAction.UPLOAD,
+        metadata: { hash: 'h' },
+      });
+
+      expect(lastData()).toEqual({ hash: 'h' });
+    });
+  });
+
   it('grava linha com ip + userAgent do contexto', async () => {
     ctx.get.mockReturnValue({
       ipAddress: '1.2.3.4',

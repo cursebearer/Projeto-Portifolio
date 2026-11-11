@@ -550,14 +550,27 @@ Executar o fluxo completo via browser:
 - [x] AuditLog LOGIN/LOGOUT/REGISTER (já instrumentado no AuthService/AuthController)
 
 ### Atualização da RFC (v1.2 → v1.3)
-- [ ] 2.2 Casos de uso: incluir compartilhamento por email e versionamento (escopo 2.8/2.9 aprovado pelo professor)
-- [ ] 2.3 RFs novos para share/versões; 2.5 RN03 ("não há compartilhamento") desatualizada
-- [ ] 2.6 Fora do Escopo: remover "Compartilhamento", "Notificações por email" e "export PDF" (comprovante PDF agora existe)
-- [ ] 5.2 Modelo de dados: `DocumentShare`, `previousDocumentId`, `AuditAction.SHARE`
-- [ ] 6.1 A09: incluir SHARE na lista de ações auditadas
-- [ ] 6.4 LGPD: provedor SMTP (Resend) passa a ser operador que recebe email do destinatário — atualizar "Informação sobre compartilhamento"; marcar status real dos endpoints LGPD
-- [ ] 7.1 Marcos: datas de M3 (06/09) e M4 (04/10) estouradas; M0 cita "CI básico" que só foi criado agora; "deploy preview na Vercel" — replanejar até 30/11
-- [ ] Incluir requisitos do PAC VIII (SonarCloud, monitoramento, hospedagem, testes web 25%)
+
+Concluída em 2026-11-10: `RFC docs/RFC_DocChain 1.3.md` (a 1.2 aprovada segue intacta).
+
+- [x] 2.2 Casos de uso: compartilhamento por email e versionamento
+- [x] 2.3 RFs novos para share/versões; 2.5 RN03 atualizada
+- [x] 2.6 Fora do Escopo revisado
+- [x] 5.2 Modelo de dados: `DocumentShare`, `previousDocumentId`, `AuditAction.SHARE`
+- [x] 6.1 A09: SHARE na lista de ações auditadas
+- [x] 6.4 LGPD: Resend como operador; endpoints LGPD marcados como implementados
+- [x] 7.1 Marcos replanejados (planejado x realizado)
+- [x] Requisitos do PAC VIII (SonarCloud, monitoramento, hospedagem, testes web 25%)
+- [ ] Atualizar o marco M6 (hospedagem) depois do deploy
+
+### Fase 6 — Chaves de API para integração (2026-11-11)
+- [x] Tabela `api_keys` (hash SHA-256 da chave, prefixo visível, `lastUsedAt`, `revokedAt`) e ações `API_KEY_CREATE`/`API_KEY_REVOKE` na auditoria
+- [x] `POST/GET/DELETE /api-keys` (só com login), limite de 5 chaves ativas
+- [x] `JwtOrApiKeyGuard` + `@AllowApiKey()`: header `X-API-Key` aceito só em `POST /documents`, `GET /documents` e `GET /documents/:id`; demais rotas respondem 403
+- [x] Uploads via chave marcados no AuditLog (`via: api_key`, `apiKeyId`); chaves incluídas na exportação LGPD
+- [x] Tela `/integracao` (menu "API"): gerar, copiar uma vez, revogar e documentação de uso
+- [x] Testes unitários, E2E (Hardhat) e smoke manual
+- [x] RFC 1.3, README e Wiki atualizados
 
 ---
 

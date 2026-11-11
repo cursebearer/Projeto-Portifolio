@@ -18,6 +18,7 @@ describe('AccountService', () => {
       deleteMany: jest.Mock;
     };
     documentShare: { findMany: jest.Mock; deleteMany: jest.Mock };
+    apiKey: { findMany: jest.Mock };
     verificationAttempt: { updateMany: jest.Mock };
     auditLog: { updateMany: jest.Mock };
     $transaction: jest.Mock;
@@ -47,6 +48,7 @@ describe('AccountService', () => {
         findMany: jest.fn(),
         deleteMany: jest.fn().mockReturnValue('op:share.deleteMany'),
       },
+      apiKey: { findMany: jest.fn().mockResolvedValue([]) },
       verificationAttempt: {
         updateMany: jest.fn().mockReturnValue('op:attempt.updateMany'),
       },
@@ -103,6 +105,24 @@ describe('AccountService', () => {
       expect(docQuery.where).toEqual({ userId: 'u1' });
       expect(docQuery.select.encryptionIv).toBeUndefined();
       expect(docQuery.select.encryptionAuthTag).toBeUndefined();
+    });
+
+    it('inclui as API keys sem expor o hash da chave', async () => {
+      prisma.user.findUnique.mockResolvedValue(user);
+      prisma.document.findMany.mockResolvedValue([]);
+      prisma.documentShare.findMany.mockResolvedValue([]);
+      prisma.apiKey.findMany.mockResolvedValue([
+        { name: 'ERP', prefix: 'dc_live_abcd' },
+      ]);
+
+      const result = await service.exportData('u1');
+
+      expect(result.apiKeys).toEqual([{ name: 'ERP', prefix: 'dc_live_abcd' }]);
+      const [keyQuery] = prisma.apiKey.findMany.mock.calls[0] as [
+        { where: unknown; select: Record<string, boolean> },
+      ];
+      expect(keyQuery.where).toEqual({ userId: 'u1' });
+      expect(keyQuery.select.keyHash).toBeUndefined();
     });
 
     it('usuário inexistente → 404', async () => {

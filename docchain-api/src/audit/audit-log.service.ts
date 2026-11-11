@@ -21,7 +21,12 @@ export class AuditLogService {
   ) {}
 
   async log(opts: LogOptions): Promise<void> {
-    const { ipAddress, userAgent, userId: ctxUserId } = this.ctx.get();
+    const {
+      ipAddress,
+      userAgent,
+      userId: ctxUserId,
+      apiKeyId,
+    } = this.ctx.get();
     try {
       const userId =
         opts.userId !== undefined ? opts.userId : (ctxUserId ?? null);
@@ -33,7 +38,7 @@ export class AuditLogService {
           resourceId: opts.resourceId,
           ipAddress,
           userAgent,
-          metadata: opts.metadata,
+          metadata: this.withApiKey(opts.metadata, apiKeyId),
         },
       });
     } catch (err) {
@@ -43,5 +48,18 @@ export class AuditLogService {
         }`,
       );
     }
+  }
+
+  // Ações feitas por integração ficam marcadas com a chave usada.
+  private withApiKey(
+    metadata: Prisma.InputJsonValue | undefined,
+    apiKeyId: string | undefined,
+  ): Prisma.InputJsonValue | undefined {
+    if (!apiKeyId) return metadata;
+    const base =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? (metadata as Prisma.InputJsonObject)
+        : {};
+    return { ...base, via: 'api_key', apiKeyId };
   }
 }
