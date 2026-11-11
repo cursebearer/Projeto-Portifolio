@@ -7,6 +7,7 @@
 | Visitante | Pessoa sem conta. Cria conta ou verifica documentos publicamente. |
 | Usuário | Pessoa autenticada. Registra, consulta, baixa, versiona, compartilha e exclui documentos. |
 | Blockchain (Sepolia) | Sistema externo onde o hash é registrado e consultado. |
+| Sistema integrado | Software do usuário (ERP, script, site) que usa uma chave de API para enviar e consultar documentos. |
 
 ## Casos de uso
 
@@ -26,11 +27,14 @@
 | UC12 | Criar nova versão | Usuário | Envia arquivo novo ligado ao documento anterior |
 | UC13 | Compartilhar por email | Usuário | Envia link de verificação e comprovante ao destinatário |
 | UC14 | Gerenciar conta (LGPD) | Usuário | Editar perfil, exportar dados, excluir conta |
+| UC15 | Gerenciar chaves de API | Usuário | Gerar (exibida uma única vez), listar e revogar até 5 chaves ativas |
+| UC16 | Registrar e consultar documentos via API | Sistema integrado | Com o header `X-API-Key`, envia documentos e consulta os próprios documentos |
 
 ```mermaid
 flowchart LR
     V([Visitante])
     U([Usuário])
+    S([Sistema integrado])
     B([Sepolia])
 
     subgraph DocChain
@@ -48,6 +52,8 @@ flowchart LR
         UC12[UC12 Nova versão]
         UC13[UC13 Compartilhar]
         UC14[UC14 Conta / LGPD]
+        UC15[UC15 Chaves de API]
+        UC16[UC16 Integração via API]
     end
 
     V --- UC01
@@ -62,6 +68,9 @@ flowchart LR
     U --- UC12
     U --- UC13
     U --- UC14
+    U --- UC15
+    S --- UC16
+    UC16 -. include .-> UC03
     UC03 -. include .-> UC09
     UC12 -. include .-> UC09
     UC09 --- B

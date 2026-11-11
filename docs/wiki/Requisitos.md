@@ -46,6 +46,7 @@ Itens que estavam fora do escopo original e foram entregues:
 | Termos de uso e política de privacidade | `/termos`, `/privacidade` |
 | Trilha de auditoria (upload, download, delete, login, share) | tabela `audit_logs` |
 | Métricas Prometheus e dashboard Grafana | `GET /metrics`, `monitoring/` |
+| Chaves de API para integração (até 5 por usuário, exibidas uma vez, guardadas como hash) | `POST/GET/DELETE /api-keys`, header `X-API-Key`, tela `/integracao` |
 
 ## Requisitos não funcionais
 
@@ -85,3 +86,7 @@ Itens que estavam fora do escopo original e foram entregues:
 | RN07 | Documento `FAILED` do próprio usuário pode ser reenviado |
 | RN08 | Limite de 50 MB por arquivo |
 | RN09 | Verificação pública só aceita SHA-256 válido |
+| RN10 | Só documento `CONFIRMED` pode ser compartilhado |
+| RN11 | Nova versão só a partir de documento próprio e não excluído |
+| RN12 | API key só envia e consulta documentos do próprio dono; demais rotas respondem 403 |
+| RN13 | Máximo de 5 chaves de API ativas por usuário; chave revogada deixa de funcionar na hora |

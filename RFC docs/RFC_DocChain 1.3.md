@@ -19,7 +19,7 @@
 | 1.0 | 12/04/2026 | Proposta inicial |
 | 1.1 | 05/2026 | Posicionamento como produto SaaS em testnet; entidades `AuditLog` e `VerificationAttempt` |
 | 1.2 | 05/2026 | Revisão pós-feedback do orientador: auth via cookie httpOnly, RFs de exclusão e validação de hash, diagrama de Estrutura de Navegação (versão aprovada) |
-| 1.3 | 11/2026 | Alinhamento ao sistema entregue: compartilhamento por e-mail com comprovante PDF e versionamento de documentos (escopo incorporado a partir do feedback da validação extensionista), sessão deslizante, endpoints LGPD implementados, requisitos de qualidade e DevOps do PAC VIII (CI/CD, SonarCloud, monitoramento, hospedagem pública), stack e marcos atualizados |
+| 1.3 | 11/2026 | Alinhamento ao sistema entregue: compartilhamento por e-mail com comprovante PDF e versionamento de documentos (escopo incorporado a partir do feedback da validação extensionista), chaves de API para integração, sessão deslizante, endpoints LGPD implementados, requisitos de qualidade e DevOps do PAC VIII (CI/CD, SonarCloud, monitoramento, hospedagem pública), stack e marcos atualizados |
 
 ---
 
@@ -280,8 +280,10 @@ O sistema possui três atores principais e os seguintes casos de uso:
 | UC13 | Registrar Nova Versão | Usuário Autenticado | Registra uma nova versão de um documento existente (ex.: versão assinada), com registro on-chain próprio e vínculo à versão anterior |
 | UC14 | Consultar Histórico de Versões | Usuário Autenticado | Visualiza a cronologia de versões de um documento (v1 → v2 → v3) |
 | UC15 | Gerenciar Conta e Dados Pessoais | Usuário Autenticado | Altera o nome, exporta os próprios dados (JSON) ou exclui a conta (direitos do titular — LGPD) |
+| UC16 | Gerenciar Chaves de API | Usuário Autenticado | Gera (exibida uma única vez), lista e revoga até 5 chaves de API para integrações |
+| UC17 | Integrar via API | Sistema Integrado | Software do usuário (ERP, script, site) envia e consulta documentos com o header `X-API-Key`, sem navegador |
 
-> **Nota (v1.3):** UC12 e UC13/UC14 foram incorporados ao escopo a partir do feedback da validação extensionista (NP1 do PAC VIII), com aprovação do orientador. UC15 materializa os direitos do titular previstos na seção 6.4. O diagrama UML abaixo é o da versão 1.2 e representa os casos UC01–UC11.
+> **Nota (v1.3):** UC12 e UC13/UC14 foram incorporados ao escopo a partir do feedback da validação extensionista (NP1 do PAC VIII), com aprovação do orientador. UC15 materializa os direitos do titular previstos na seção 6.4. UC16/UC17 (chaves de API) foram adicionados em 11/2026 para permitir integração com sistemas do usuário. O diagrama UML abaixo é o da versão 1.2 e representa os casos UC01–UC11.
 
 ![Diagrama de Casos de Uso (UML) — atores, boundary DocChain e 10 casos de uso](<artefatos_visuais/1 - Diagrama de Casos de Uso (UML).png>)
 
@@ -359,6 +361,15 @@ O sistema possui três atores principais e os seguintes casos de uso:
 
 - **RF37** — O sistema deve expor métricas no formato Prometheus em `GET /metrics` (latência e total de requisições por rota e status, documentos por status), protegíveis por token (`METRICS_TOKEN`) e inacessíveis pela rota pública de produção.
 
+**Módulo de Integração via API (novo na v1.3):**
+
+- **RF38** — O sistema deve permitir que o Usuário Autenticado gere chaves de API via `POST /api-keys`, informando um nome (até 60 caracteres). A chave completa (formato `dc_live_` + 32 caracteres aleatórios) deve ser exibida **uma única vez**, na resposta de criação.
+- **RF39** — O sistema deve armazenar apenas o **hash SHA-256** da chave e um prefixo visível (`dc_live_` + 4 caracteres) para identificação; a chave completa não pode ser recuperada depois de criada.
+- **RF40** — O sistema deve listar as chaves ativas do usuário (`GET /api-keys`, com nome, prefixo, data de criação e último uso) e permitir revogá-las (`DELETE /api-keys/:id`). A gestão de chaves exige login na plataforma; uma chave de API não cria nem revoga chaves.
+- **RF41** — O sistema deve aceitar o header `X-API-Key` **somente** em `POST /documents`, `GET /documents` e `GET /documents/:id`, autenticando a requisição como o dono da chave; nas demais rotas, uma requisição com chave deve receber `403 Forbidden`.
+- **RF42** — O sistema deve registrar na trilha de auditoria a criação e a revogação de chaves (`API_KEY_CREATE`, `API_KEY_REVOKE`) e marcar as ações feitas por chave (`metadata.via = "api_key"`, `metadata.apiKeyId`).
+- **RF43** — O sistema deve oferecer na interface uma página de integração (`/integracao`) com a gestão das chaves e a documentação de uso (endpoints, exemplos, erros e boas práticas).
+
 ---
 
 ## 2.4 Requisitos Não Funcionais (RNF)
@@ -418,6 +429,8 @@ O sistema possui três atores principais e os seguintes casos de uso:
 - **RN03** — Documentos pertencem exclusivamente ao usuário que os registrou. O compartilhamento (v1.3) não transfere a propriedade nem dá acesso à plataforma: o destinatário recebe por e-mail uma cópia do arquivo e o comprovante, e verifica a autenticidade pela verificação pública.
 - **RN10** *(v1.3)* — Apenas documentos com status `CONFIRMED` podem ser compartilhados.
 - **RN11** *(v1.3)* — Uma nova versão só pode ser registrada a partir de um documento do próprio usuário e não excluído. Como o hash é único (RN01), a nova versão precisa ter conteúdo diferente de qualquer documento já registrado; ao reenviar um arquivo idêntico a um documento próprio, o sistema orienta o usuário a registrar uma nova versão.
+- **RN12** *(v1.3)* — Uma chave de API só envia e consulta documentos do próprio dono; excluir, baixar, compartilhar, versionar e gerenciar a conta exigem login na plataforma.
+- **RN13** *(v1.3)* — Cada usuário pode ter no máximo **5 chaves de API ativas**. A chave não expira automaticamente; vale até ser revogada, e a revogação tem efeito imediato.
 - **RN04** — A verificação pública (`GET /verify/public/:hash`) não expõe metadados sensíveis (nome do arquivo, dono, etc.) — apenas confirma se o hash existe na blockchain e seus dados públicos (data, endereço que registrou).
 - **RN05** — Apenas usuários autenticados podem fazer upload e gerenciar documentos.
 - **RN06** — O download do arquivo descriptografado é permitido apenas ao usuário proprietário.
@@ -740,6 +753,7 @@ Estrutura interna do backend NestJS, organizado em módulos:
 - **AuditModule** — `AuditLogService` (trilha de auditoria)
 - **HealthModule** — `GET /health` (banco + blockchain)
 - **MetricsModule** *(v1.3)* — `GET /metrics` (prom-client) e middleware que mede todas as requisições
+- **ApiKeysModule** *(v1.3)* — `ApiKeysController` (POST/GET/DELETE /api-keys, só com login), `ApiKeysService` (geração, hash, validação, revogação) e `JwtOrApiKeyGuard`
 - **CryptoService** (provider interno)
   - `hashFile(buffer)` → SHA-256
   - `encrypt(buffer)` / `decrypt(ciphertext, iv, authTag)` → AES-256-GCM
@@ -817,6 +831,21 @@ Registro de cada compartilhamento por e-mail.
 | sentAt | TIMESTAMP | NOT NULL, default now(), INDEX (base do limite por hora) |
 | verificationCount | INTEGER | default 0 |
 
+**Entidade ApiKey** *(nova na v1.3)*:
+
+Chaves de API para integração. A chave completa nunca é armazenada.
+
+| Atributo | Tipo | Restrições |
+|---|---|---|
+| id | UUID | PK |
+| userId | UUID | FK → User.id, NOT NULL, INDEX, ON DELETE CASCADE |
+| name | VARCHAR(60) | NOT NULL |
+| prefix | VARCHAR(16) | NOT NULL — parte visível (`dc_live_` + 4 caracteres) |
+| keyHash | TEXT | UNIQUE, NOT NULL — SHA-256 da chave |
+| lastUsedAt | TIMESTAMP | NULLABLE |
+| createdAt | TIMESTAMP | NOT NULL, default now() |
+| revokedAt | TIMESTAMP | NULLABLE — preenchido na revogação |
+
 **Entidade AuditLog:**
 
 Trilha de auditoria das ações sensíveis dos usuários — atende requisitos de **compliance LGPD** (rastreabilidade) e permite investigação de incidentes de segurança.
@@ -825,7 +854,7 @@ Trilha de auditoria das ações sensíveis dos usuários — atende requisitos d
 |---|---|---|
 | id | UUID | PK |
 | userId | UUID | FK → User.id, NULLABLE (NULL para ações públicas), INDEX |
-| action | ENUM (LOGIN, LOGOUT, REGISTER, UPLOAD, DOWNLOAD, DELETE, VERIFY_PUBLIC, VERIFY_PRIVATE, SHARE) | NOT NULL, INDEX |
+| action | ENUM (LOGIN, LOGOUT, REGISTER, UPLOAD, DOWNLOAD, DELETE, VERIFY_PUBLIC, VERIFY_PRIVATE, SHARE, API_KEY_CREATE, API_KEY_REVOKE) | NOT NULL, INDEX |
 | resourceType | VARCHAR(50) | NULLABLE — "document", "user" etc. |
 | resourceId | UUID | NULLABLE — ID do recurso afetado |
 | ipAddress | VARCHAR(45) | NULLABLE — IPv4 ou IPv6 |
@@ -857,6 +886,7 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 - Um **Document** pode ter **muitas VerificationAttempts** associadas (1:N, cascade SET NULL)
 - Um **Document** pode ter **muitas versões seguintes** e no máximo **uma versão anterior** (auto-relacionamento 1:N via `previousDocumentId`) *(v1.3)*
 - Um **Document** pode ter **muitos DocumentShares**; um **User** realiza **muitos DocumentShares** (1:N) *(v1.3)*
+- Um **User** possui **muitas ApiKeys** (1:N, cascade DELETE na exclusão da conta) *(v1.3)*
 
 > O DER abaixo é o da versão 1.2 (quatro tabelas). A entidade `DocumentShare` e o auto-relacionamento de versões foram adicionados pela migration `20260914042404_add_versioning_and_sharing`.
 
@@ -877,6 +907,7 @@ Log de toda tentativa de verificação (pública via `/verify` ou privada via da
 - **BlockchainModule** — Integração com Smart Contract via Ethers.js (`registerDocument`, `verifyDocument`, `isRegistered`), com retry, backoff e RPCs reserva
 - **AuditModule** — Trilha de auditoria das ações sensíveis
 - **HealthModule e MetricsModule** *(v1.3)* — Saúde do sistema e métricas Prometheus
+- **ApiKeysModule** *(v1.3)* — Gestão de chaves de API e o `JwtOrApiKeyGuard`, que aceita login por cookie ou chave nas rotas marcadas com `@AllowApiKey()`
 - **PrismaModule** — Acesso a banco PostgreSQL com cliente tipado
 
 **Smart Contract (docchain-contracts):**
@@ -988,6 +1019,7 @@ Cada item abaixo lista a ameaça, a forma como ela se aplicaria ao DocChain e a 
 
 - **Guard nas rotas privadas:** decorator `@UseGuards(JwtAuthGuard)` aplicado em todos os controllers privados (Documents); rotas públicas (`POST /auth/register`, `POST /auth/login`, `GET /verify/public/:hash`, `GET /health`) ficam sem o guard explicitamente.
 - **Ownership check:** o `DocumentsService` recebe `userId` (obtido via decorator `@CurrentUser()`) e aplica `WHERE userId = :userId` em toda query do Prisma — garante que um usuário nunca enxergue documentos de outro, mesmo conhecendo o `id` UUID do recurso. Tentativa de acessar documento alheio retorna `404` (não `403`), evitando vazamento de existência.
+- **Chaves de API** *(v1.3)*: o `JwtOrApiKeyGuard` substitui o `JwtAuthGuard` no `DocumentsController`. Sem o header `X-API-Key`, o comportamento é o login por cookie. Com o header, a chave é validada pelo hash SHA-256 (busca por índice único) e só é aceita nas rotas marcadas com `@AllowApiKey()` (enviar, listar e consultar documentos); nas demais, a resposta é `403`. A chave tem 192 bits de entropia, o que torna o SHA-256 suficiente (ao contrário de senhas, não há risco de dicionário) e permite a busca direta pelo hash. Como a chave trafega em header e não em cookie, ela não é enviada automaticamente pelo navegador, o que elimina o vetor de CSRF para essas requisições.
 - **Princípio do menor privilégio:** a wallet do servidor (que assina transações on-chain) recebe apenas o ETH de Sepolia necessário para a operação esperada; sua chave privada (`PRIVATE_KEY`) reside em variável de ambiente segregada, nunca no banco, nunca no código, nunca em commits.
 
 **Verificação pública (sem autenticação):**
@@ -1056,7 +1088,7 @@ Os direitos do titular previstos no Art. 18 são atendidos pelos endpoints de ge
 | **Confirmação e acesso aos dados** | `GET /documents` lista os documentos do usuário autenticado; `GET /auth/me` retorna `User` (id, email, name, createdAt) | Implementado |
 | **Correção** | `PATCH /auth/me` permite alterar `name` (e-mail é imutável após cadastro para preservar integridade da chave única) | Implementado |
 | **Eliminação / anonimização** | `DELETE /auth/me`, com confirmação de senha: (a) remove os arquivos cifrados do storage, (b) remove os compartilhamentos e os documentos, (c) anonimiza `AuditLog` (`userId = NULL`, `metadata` removida) e `VerificationAttempt` (`userId = NULL`, `documentId = NULL`), preservando o registro operacional sem vínculo pessoal, (d) remove o `User` — as etapas (b) a (d) ocorrem em uma única transação no banco | Implementado |
-| **Portabilidade** | `GET /auth/me/export` retorna JSON com `User` + lista de `Document` (metadados, `hash`, `txHash`, datas) | Implementado |
+| **Portabilidade** | `GET /auth/me/export` retorna JSON com `User`, lista de `Document` (metadados, `hash`, `txHash`, datas), compartilhamentos e chaves de API (nome, prefixo e datas, sem o hash) | Implementado |
 | **Informação sobre compartilhamento** | Não há analytics externos, ad networks ou processadores de pagamento. Dados que saem do sistema: (1) o `hash` SHA-256 enviado à Sepolia, que não identifica o titular; (2) *(v1.3)* ao usar o compartilhamento, o e-mail do destinatário, a mensagem opcional, o arquivo e o comprovante são entregues ao provedor de e-mail (Resend), que atua como **operador** apenas para a entrega da mensagem. O compartilhamento é sempre uma ação explícita do titular | Atendido e informado na Política de Privacidade (`/privacidade`) |
 | **Revogação de consentimento** | Equivale à eliminação de conta (`DELETE /auth/me`) | Implementado |
 

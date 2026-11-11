@@ -34,6 +34,7 @@ Quem entrega um contrato, balanço ou declaração em formato digital não tem c
 - Verificação pública sem conta, por arquivo (hash calculado no navegador) ou por hash, com link direto `/verify/<hash>`
 - Compartilhamento por e-mail com o arquivo e um comprovante em PDF com QR code
 - Minha conta: editar perfil, exportar dados e excluir conta (LGPD), com Termos de Uso e Política de Privacidade
+- Chaves de API para integração: até 5 por usuário, exibidas uma única vez e guardadas só como hash; com o header `X-API-Key`, o sistema do usuário envia e consulta documentos (página "API" no menu, com a documentação de uso)
 - Trilha de auditoria das ações sensíveis
 - Métricas Prometheus, dashboard Grafana e alertas
 
@@ -134,8 +135,8 @@ cd docchain-web && npm run test:cov
 
 | Projeto | Cobertura de linhas | Testes | Meta |
 | --- | --- | --- | --- |
-| API | 99% | 213 | 75% (bloqueante no CI) |
-| Web | 66% | 72 | 25% |
+| API | 99% | 236 | 75% (bloqueante no CI) |
+| Web | 67% | 82 | 25% |
 | Contrato | 100% | | |
 
 Medido em 11/2026. Detalhes em [Wiki > Qualidade e Testes](https://github.com/cursebearer/Projeto-Portifolio/wiki/Qualidade-e-Testes).
