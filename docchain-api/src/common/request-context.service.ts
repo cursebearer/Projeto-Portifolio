@@ -6,6 +6,8 @@ export interface RequestContext {
   ipAddress?: string;
   userAgent?: string;
   userId?: string;
+  // Preenchido quando a requisição foi autenticada por API key.
+  apiKeyId?: string;
 }
 
 @Injectable()

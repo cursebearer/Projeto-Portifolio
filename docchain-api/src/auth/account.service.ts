@@ -36,6 +36,13 @@ export interface AccountExport {
     message: string | null;
     sentAt: Date;
   }>;
+  apiKeys: Array<{
+    name: string;
+    prefix: string;
+    createdAt: Date;
+    lastUsedAt: Date | null;
+    revokedAt: Date | null;
+  }>;
 }
 
 const USER_PUBLIC_FIELDS = {
@@ -69,7 +76,7 @@ export class AccountService {
     });
     if (!user) throw new NotFoundException('Usuário não encontrado.');
 
-    const [documents, shares] = await Promise.all([
+    const [documents, shares, apiKeys] = await Promise.all([
       this.prisma.document.findMany({
         where: { userId },
         orderBy: { uploadedAt: 'asc' },
@@ -99,9 +106,26 @@ export class AccountService {
           sentAt: true,
         },
       }),
+      this.prisma.apiKey.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          name: true,
+          prefix: true,
+          createdAt: true,
+          lastUsedAt: true,
+          revokedAt: true,
+        },
+      }),
     ]);
 
-    return { exportedAt: new Date().toISOString(), user, documents, shares };
+    return {
+      exportedAt: new Date().toISOString(),
+      user,
+      documents,
+      shares,
+      apiKeys,
+    };
   }
 
   async deleteAccount(userId: string, password: string): Promise<void> {

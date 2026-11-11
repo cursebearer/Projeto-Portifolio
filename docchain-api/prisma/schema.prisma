@@ -35,6 +35,8 @@ enum AuditAction {
   VERIFY_PUBLIC
   VERIFY_PRIVATE
   SHARE
+  API_KEY_CREATE
+  API_KEY_REVOKE
 }
 
 enum VerificationSource {
@@ -56,6 +58,7 @@ model User {
   auditLogs            AuditLog[]
   verificationAttempts VerificationAttempt[]
   documentShares       DocumentShare[]
+  apiKeys              ApiKey[]
 
   @@map("users")
 }
@@ -127,6 +130,25 @@ model DocumentShare {
   @@index([sharedWithEmail])
   @@index([sentAt])
   @@map("document_shares")
+}
+
+// ─────────────── api_keys ───────────────
+
+// Chave de acesso à API para integrações. A chave em si nunca é salva: só o hash SHA-256.
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  name       String    @db.VarChar(60)
+  prefix     String    @db.VarChar(16)
+  keyHash    String    @unique @map("key_hash")
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
 }
 
 // ─────────────── audit_logs ───────────────

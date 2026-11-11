@@ -14,12 +14,19 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCookieAuth,
+  ApiSecurity,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Document } from '@prisma/client';
 import type { Response } from 'express';
+import { AllowApiKey } from '../api-keys/allow-api-key.decorator';
+import { JwtOrApiKeyGuard } from '../api-keys/jwt-or-api-key.guard';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ListDocumentsQueryDto } from './dto/list-documents.query.dto';
 import { DocumentsService } from './documents.service';
 import { PaginatedDocuments, VersionTimeline } from './documents.types';
@@ -27,11 +34,15 @@ import { PaginatedDocuments, VersionTimeline } from './documents.types';
 @ApiTags('documents')
 @ApiCookieAuth('access_token')
 @Controller('documents')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtOrApiKeyGuard)
 export class DocumentsController {
   constructor(private readonly documents: DocumentsService) {}
 
+  // Rotas com @AllowApiKey também aceitam o header X-API-Key (integrações).
+  // As demais exigem o login da plataforma.
   @Post()
+  @AllowApiKey()
+  @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -50,6 +61,8 @@ export class DocumentsController {
   }
 
   @Get()
+  @AllowApiKey()
+  @ApiSecurity('api-key')
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: ListDocumentsQueryDto,
@@ -58,6 +71,8 @@ export class DocumentsController {
   }
 
   @Get(':id')
+  @AllowApiKey()
+  @ApiSecurity('api-key')
   detail(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,

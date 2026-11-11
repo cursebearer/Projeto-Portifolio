@@ -52,8 +52,10 @@ async function bootstrap() {
       in: 'cookie',
       name: 'access_token',
     })
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'X-API-Key' }, 'api-key')
     .addTag('auth')
     .addTag('documents')
+    .addTag('api-keys')
     .addTag('verification')
     .addTag('health')
     .build();

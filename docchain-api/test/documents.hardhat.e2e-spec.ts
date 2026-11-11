@@ -84,4 +84,43 @@ describeOrSkip('Documents E2E (Hardhat local)', () => {
     expect(verifyRes.body.exists).toBe(true);
     expect(verifyRes.body.documentHash.toLowerCase()).toBe(`0x${expectedHash}`);
   }, 60000);
+
+  it('API key: gera, envia e consulta documento, respeita o escopo e a revogação', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api-keys')
+      .set('Cookie', cookie)
+      .send({ name: 'E2E' })
+      .expect(201);
+    const key = created.body.key as string;
+    expect(key).toMatch(/^dc_live_/);
+
+    const content = Buffer.from(`api-key-e2e-${randomUUID()}`, 'utf8');
+    const uploadRes = await request(app.getHttpServer())
+      .post('/documents')
+      .set('X-API-Key', key)
+      .attach('file', content, 'via-api.txt')
+      .expect(201);
+    expect(uploadRes.body.status).toBe('CONFIRMED');
+
+    await request(app.getHttpServer())
+      .get(`/documents/${uploadRes.body.id}`)
+      .set('X-API-Key', key)
+      .expect(200);
+
+    // Fora do escopo da chave
+    await request(app.getHttpServer())
+      .delete(`/documents/${uploadRes.body.id}`)
+      .set('X-API-Key', key)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/api-keys/${created.body.id}`)
+      .set('Cookie', cookie)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/documents')
+      .set('X-API-Key', key)
+      .expect(401);
+  }, 60000);
 });
