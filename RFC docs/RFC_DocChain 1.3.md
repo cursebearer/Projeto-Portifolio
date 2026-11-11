@@ -283,7 +283,7 @@ O sistema possui três atores principais e os seguintes casos de uso:
 | UC16 | Gerenciar Chaves de API | Usuário Autenticado | Gera (exibida uma única vez), lista e revoga até 5 chaves de API para integrações |
 | UC17 | Integrar via API | Sistema Integrado | Software do usuário (ERP, script, site) envia e consulta documentos com o header `X-API-Key`, sem navegador |
 
-> **Nota (v1.3):** UC12 e UC13/UC14 foram incorporados ao escopo a partir do feedback da validação extensionista (NP1 do PAC VIII), com aprovação do orientador. UC15 materializa os direitos do titular previstos na seção 6.4. UC16/UC17 (chaves de API) foram adicionados em 11/2026 para permitir integração com sistemas do usuário. O diagrama UML abaixo é o da versão 1.2 e representa os casos UC01–UC11.
+> **Nota (v1.3):** UC12 e UC13/UC14 foram incorporados ao escopo a partir do feedback da validação extensionista (NP1 do PAC VIII), com aprovação do orientador. UC15 materializa os direitos do titular previstos na seção 6.4. UC16/UC17 (chaves de API) foram implementados **além do escopo planejado** (vide seção 2.6), em 11/2026, para permitir integração com sistemas do usuário. O diagrama UML abaixo é o da versão 1.2 e representa os casos UC01–UC11.
 
 ![Diagrama de Casos de Uso (UML) — atores, boundary DocChain e 10 casos de uso](<artefatos_visuais/1 - Diagrama de Casos de Uso (UML).png>)
 
@@ -361,7 +361,7 @@ O sistema possui três atores principais e os seguintes casos de uso:
 
 - **RF37** — O sistema deve expor métricas no formato Prometheus em `GET /metrics` (latência e total de requisições por rota e status, documentos por status), protegíveis por token (`METRICS_TOKEN`) e inacessíveis pela rota pública de produção.
 
-**Módulo de Integração via API (novo na v1.3):**
+**Módulo de Integração via API (novo na v1.3 — implementado além do escopo planejado, vide seção 2.6):**
 
 - **RF38** — O sistema deve permitir que o Usuário Autenticado gere chaves de API via `POST /api-keys`, informando um nome (até 60 caracteres). A chave completa (formato `dc_live_` + 32 caracteres aleatórios) deve ser exibida **uma única vez**, na resposta de criação.
 - **RF39** — O sistema deve armazenar apenas o **hash SHA-256** da chave e um prefixo visível (`dc_live_` + 4 caracteres) para identificação; a chave completa não pode ser recuperada depois de criada.
@@ -429,8 +429,8 @@ O sistema possui três atores principais e os seguintes casos de uso:
 - **RN03** — Documentos pertencem exclusivamente ao usuário que os registrou. O compartilhamento (v1.3) não transfere a propriedade nem dá acesso à plataforma: o destinatário recebe por e-mail uma cópia do arquivo e o comprovante, e verifica a autenticidade pela verificação pública.
 - **RN10** *(v1.3)* — Apenas documentos com status `CONFIRMED` podem ser compartilhados.
 - **RN11** *(v1.3)* — Uma nova versão só pode ser registrada a partir de um documento do próprio usuário e não excluído. Como o hash é único (RN01), a nova versão precisa ter conteúdo diferente de qualquer documento já registrado; ao reenviar um arquivo idêntico a um documento próprio, o sistema orienta o usuário a registrar uma nova versão.
-- **RN12** *(v1.3)* — Uma chave de API só envia e consulta documentos do próprio dono; excluir, baixar, compartilhar, versionar e gerenciar a conta exigem login na plataforma.
-- **RN13** *(v1.3)* — Cada usuário pode ter no máximo **5 chaves de API ativas**. A chave não expira automaticamente; vale até ser revogada, e a revogação tem efeito imediato.
+- **RN12** *(v1.3, além do escopo)* — Uma chave de API só envia e consulta documentos do próprio dono; excluir, baixar, compartilhar, versionar e gerenciar a conta exigem login na plataforma.
+- **RN13** *(v1.3, além do escopo)* — Cada usuário pode ter no máximo **5 chaves de API ativas**. A chave não expira automaticamente; vale até ser revogada, e a revogação tem efeito imediato.
 - **RN04** — A verificação pública (`GET /verify/public/:hash`) não expõe metadados sensíveis (nome do arquivo, dono, etc.) — apenas confirma se o hash existe na blockchain e seus dados públicos (data, endereço que registrou).
 - **RN05** — Apenas usuários autenticados podem fazer upload e gerenciar documentos.
 - **RN06** — O download do arquivo descriptografado é permitido apenas ao usuário proprietário.
@@ -460,6 +460,12 @@ Para manter o escopo factível e coerente com a proposta de **produto SaaS open-
 - Relatórios em CSV ou Excel — existem apenas o comprovante PDF por documento (v1.3) e a exportação dos dados pessoais em JSON (LGPD)
 
 Esses itens compõem o **backlog de evolução futura** — caso a comunidade open-source contribua ou surjam casos de uso específicos, podem ser explorados em iterações posteriores sem comprometer a arquitetura atual (que já foi desenhada com extensibilidade em mente: `IStorageService` abstrato, backend stateless, módulos independentes).
+
+### Entregue além do escopo planejado *(v1.3)*
+
+Funcionalidade que não constava no escopo da RFC aprovada nem foi solicitada na validação extensionista, implementada com o produto já completo:
+
+- **Chaves de API para integração** (UC16–UC17, RF38–RF43, RN12–RN13): permite que o sistema do próprio usuário (ERP, script, site) envie e consulte documentos sem o navegador, com chaves de escopo limitado, exibidas uma única vez e armazenadas apenas como hash. Foi possível incorporá-la sem alterar o fluxo de registro porque a autenticação é isolada em guards do NestJS e o `DocumentsService` recebe apenas o `userId`.
 
 ---
 
