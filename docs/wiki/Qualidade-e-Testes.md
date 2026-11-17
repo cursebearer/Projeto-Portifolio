@@ -45,7 +45,7 @@ Dependabot abre PRs semanais de atualização para os três projetos.
 
 ## Entrega contínua (`.github/workflows/cd.yml`)
 
-Quando o CI passa na `main`, o CD publica as imagens `ghcr.io/cursebearer/docchain-api` e `ghcr.io/cursebearer/docchain-web` com as tags `latest` e o SHA curto do commit. A URL pública da API usada no build do web vem da variável de repositório `NEXT_PUBLIC_API_URL`. O passo de deploy no provedor de nuvem entra nesse workflow quando a hospedagem for definida.
+Quando o CI passa na `main`, o CD publica as imagens `ghcr.io/cursebearer/docchain-api` e `ghcr.io/cursebearer/docchain-web` com as tags `latest` e o SHA curto do commit. A URL pública da API usada no build do web vem da variável de repositório `NEXT_PUBLIC_API_URL`. Em seguida o job de deploy entra na VPS por SSH, troca a tag da imagem, sobe os containers e confere `https://docchain.tech/api/health`.
 
 ## SonarCloud
 
