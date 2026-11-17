@@ -1126,7 +1126,7 @@ O desenvolvimento do DocChain foi organizado em fases sequenciais, cada uma entr
 | **M3 — Frontend (Web)** | Telas públicas e privadas, verificação pública, detalhe com compartilhamento e versões, Minha conta (LGPD), landing page. | Fluxo ponta a ponta funcionando | 2026-09-06 | **2026-10-13** |
 | **M4 — Integração e Documentação** | Docker Compose unificado, seed da conta de demonstração, READMEs, Wiki e revisão da RFC (v1.3). | Repositório pronto para clone-and-run, documentação fechada | 2026-10-04 | **2026-11-03** (RFC 1.3 em 11/2026) |
 | **M5 — Qualidade e DevOps (PAC VIII)** *(novo na v1.3)* | CI com testes, cobertura, E2E, Docker, npm audit e SonarCloud; CD com GHCR e deploy por SSH; monitoramento com Prometheus e Grafana; branch protection. | 10 checks obrigatórios na `main`, Quality Gate aprovado, painel de monitoramento | — | **2026-11-03** |
-| **M6 — Hospedagem pública** *(novo na v1.3)* | VPS com Docker Compose de produção, Caddy com HTTPS e CD apontando para o servidor. | Aplicação pública e estável | — | Previsto até **2026-11-30** |
+| **M6 — Hospedagem pública** *(novo na v1.3)* | VPS com Docker Compose de produção, Caddy com HTTPS e CD apontando para o servidor. | Aplicação pública e estável em <https://docchain.tech> | — | **2026-11-17** |
 | **Entrega final, prova de autoria e Poster + Demo Day** | Entrega do software em release e evidências do PAC VIII; prova de autoria; apresentação pública. | Release, pôster com QR code, apresentação | 2026-12 | Entrega 30/11/2026; Demo Day 10, 15 ou 16/12/2026 |
 
 > **Desvios de cronograma:** os marcos M1–M4 atrasaram entre 4 e 6 semanas em relação ao plano da v1.2, principalmente pela incorporação do escopo de compartilhamento e versionamento (feedback da validação extensionista) e pela inclusão do marco M5 de qualidade e DevOps. O "deploy preview na Vercel" previsto no M3 da v1.2 foi descartado: o Playbook da disciplina não permite hospedagem em plataformas apenas de frontend, e a hospedagem passou a ser uma VPS com a stack completa (M6).
@@ -1163,6 +1163,8 @@ A branch `main` é protegida: merge apenas via pull request e com os 10 checks a
 2. Cópia dos arquivos de produção para o servidor e atualização da tag da imagem.
 3. `docker compose pull` e `up -d` via SSH, executados pelo pipeline (sem passos manuais).
 4. Verificação de saúde em `https://<domínio>/api/health`.
+
+**Produção:** a aplicação está publicada em <https://docchain.tech>, numa VPS Hostinger KVM 1 (Ubuntu 24.04, datacenter no Brasil), com o Caddy emitindo o certificado HTTPS do Let's Encrypt. O primeiro deploy foi feito pelo próprio CD em 17/11/2026.
 
 **Rollback:** reaplicar a tag do commit anterior no servidor, ou executar o CD manualmente a partir do commit desejado (`deploy/README.md`).
 

@@ -4,6 +4,8 @@ Plataforma web de registro documental com prova de integridade em blockchain. O 
 
 Trabalho de Conclusão de Curso de Engenharia de Software (Católica SC), linha Web.
 
+Em produção: <https://docchain.tech>.
+
 ## Páginas
 
 | Página | Conteúdo |

@@ -12,6 +12,16 @@ GitHub (merge na main) -> CI verde -> CD: build e push no GHCR -> SSH na VM -> d
 | `Caddyfile` | HTTPS automático e roteamento por caminho no mesmo domínio |
 | `.env.example` | Variáveis do compose (domínio, senhas, tag da imagem) |
 
+## Produção atual
+
+| Item | Valor |
+| --- | --- |
+| URL | <https://docchain.tech> |
+| Servidor | Hostinger VPS KVM 1, Ubuntu 24.04, datacenter no Brasil |
+| Usuário do CD | `deploy` (grupo `docker`), arquivos em `~/docchain` |
+| Firewall | `ufw` com 22, 80 e 443 liberadas |
+| DNS | Registros A e AAAA de `docchain.tech` para a VPS; `www` em CNAME, redirecionado pelo Caddy |
+
 ## Provedor
 
 Qualquer VM com 2 GB de RAM e Docker serve. Opções compatíveis com o Playbook (não pode Vercel, Netlify, Render nem Firebase):

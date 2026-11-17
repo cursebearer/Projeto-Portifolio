@@ -14,10 +14,11 @@ Projeto Portfólio (TCC) de Engenharia de Software da Católica SC, por Rafael P
 
 | Documento | Onde |
 | --- | --- |
+| Aplicação em produção | <https://docchain.tech> |
 | Wiki (arquitetura, requisitos, casos de uso, deploy, monitoramento, qualidade) | [Wiki](https://github.com/cursebearer/Projeto-Portifolio/wiki) (fonte em `docs/wiki/`) |
 | RFC do projeto (versão atual) | [`RFC docs/RFC_DocChain 1.3.md`](<RFC docs/RFC_DocChain 1.3.md>) |
 | RFC aprovada (versão 1.2) | [`RFC docs/`](<RFC docs/>) |
-| Documentação da API | Swagger em `/api/docs` |
+| Documentação da API | Swagger em `/api/docs` ([produção](https://docchain.tech/api/docs)) |
 | Planejamento e roadmap | [`planning/`](planning/) |
 
 ## O problema
@@ -146,7 +147,9 @@ Medido em 11/2026. Detalhes em [Wiki > Qualidade e Testes](https://github.com/cu
 - **CI** (`.github/workflows/ci.yml`), em todo push e pull request: lint, testes com cobertura (API, Web e contrato), E2E com blockchain local, build das imagens Docker, SonarCloud com Quality Gate e `npm audit`. A `main` é protegida e só aceita merge com os 10 checks aprovados.
 - **CD** (`.github/workflows/cd.yml`), após o CI na `main`: publica as imagens no GitHub Container Registry e atualiza o servidor de produção por SSH, com verificação de saúde no final e rollback pela tag do commit anterior.
 
-Produção, variáveis de ambiente e rollback: [`deploy/README.md`](deploy/README.md) e [Wiki > Deploy](https://github.com/cursebearer/Projeto-Portifolio/wiki/Deploy).
+Produção: <https://docchain.tech>, numa VPS Hostinger (Ubuntu 24.04) com Docker Compose e Caddy (HTTPS do Let's Encrypt).
+
+Variáveis de ambiente e rollback: [`deploy/README.md`](deploy/README.md) e [Wiki > Deploy](https://github.com/cursebearer/Projeto-Portifolio/wiki/Deploy).
 
 ## Estrutura
 

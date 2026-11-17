@@ -74,6 +74,8 @@ npm run dev -- -p 3001
 
 ## Produção
 
+Endereço: **<https://docchain.tech>** (Swagger em `/api/docs`, Grafana em `/grafana/`). Servidor: VPS Hostinger KVM 1 (1 vCPU, 4 GB, Ubuntu 24.04, datacenter no Brasil).
+
 O Playbook da disciplina proíbe Vercel, Netlify, Render e Firebase e proíbe deploy manual por SSH ou FTP. O DocChain roda numa VM Linux em nuvem pública com Docker Compose, e o pipeline faz o deploy sozinho:
 
 ```
@@ -84,7 +86,7 @@ Arquivos em `deploy/`: `docker-compose.prod.yml` (postgres, api, web, caddy, pro
 
 | Item | Como fica |
 | --- | --- |
-| Domínio | Um domínio só. O Caddy manda `/api/*` para a API e o resto para o web, então o cookie `access_token` (host-only, `SameSite=Lax`) é visto pelo proxy do Next |
+| Domínio | `docchain.tech` (registro A e AAAA para a VPS); `www.docchain.tech` redireciona para ele. Um domínio só. O Caddy manda `/api/*` para a API e o resto para o web, então o cookie `access_token` (host-only, `SameSite=Lax`) é visto pelo proxy do Next |
 | HTTPS | Certificado automático do Let's Encrypt pelo Caddy. Necessário porque com `NODE_ENV=production` o cookie é `Secure` |
 | Banco e storage | Volumes Docker persistentes na VM |
 | Segredos | `.env` e `api.env` só na VM (`chmod 600`); chave SSH e host como secrets do GitHub |
